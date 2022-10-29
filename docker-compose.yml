@@ -1,18 +1,9 @@
 version: "3.8"
 
 services:
-  client:
-    container_name: client
-    working_dir: /client
-    build:
-      context: .
-      dockerfile: Dockerfile
-    volumes:
-      - ./:/client
-
   database:
-    container_name: database
     image: postgres
+    container_name: database
     restart: always
     command: ["postgres", "-c", "log_statement=all"]
     environment:
@@ -26,16 +17,24 @@ services:
 
   server:
     container_name: server
-    image: node:18
     restart: always
     working_dir: /server
-    command: sh -c "yarn && yarn start"
+    build:
+      context: ./server
+      dockerfile: Dockerfile
     depends_on:
       - database
     links:
       - database
-    volumes:
-      - ./server:/server
+    ports:
+      - 9001:9001
+
+  client:
+    container_name: client
+    working_dir: /client
+    build:
+      context: ./client
+      dockerfile: Dockerfile
 
 volumes:
   database:
