@@ -4,15 +4,19 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "build": "esbuild ./src --bundle --outfile=build/chatsino.js",
+    "build": "esbuild ./src --platform=node --bundle --outfile=build/chatsino.js",
     "start": "yarn build && node build/chatsino"
   },
   "dependencies": {
+    "@types/ws": "^8.5.3",
     "esbuild": "^0.15.12",
     "ws": "^8.10.0"
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.7",
     "utf-8-validate": "^5.0.10"
+  },
+  "devDependencies": {
+    "@types/node": "^18.11.7"
   }
 }
