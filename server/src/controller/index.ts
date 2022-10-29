@@ -3,6 +3,7 @@ import { Duplex } from "stream";
 import { RawData, WebSocket, WebSocketServer } from "ws";
 import { ChatsinoClient, authenticate } from "auth";
 import { ChatsinoLogger } from "logging";
+import { secondsSince } from "helpers";
 
 export class ChatsinoController {
   public static instance = new ChatsinoController();
@@ -11,29 +12,18 @@ export class ChatsinoController {
   private socketToClientMap = new Map<WebSocket, ChatsinoClient>();
 
   public handleConnection = (ws: WebSocket, _: IncomingMessage) => {
-    this.logger.info({ client: this.getClientName(ws) }, "Client connected.");
-
-    ws.on("message", (data) => this.handleReceiveMessage(ws, data));
-  };
-
-  public handleReceiveMessage = (ws: WebSocket, data: RawData) => {
-    const message = data.toString();
-
     this.logger.info(
-      { client: this.getClientName(ws), message },
-      "Received a message from a client."
+      {
+        client: this.getClientName(ws),
+        "clients connected": this.socketToClientMap.size,
+      },
+      "Client connected."
     );
 
-    // Do stuff.
-  };
-
-  public handleSendMessage = (ws: WebSocket, message: string) => {
-    this.logger.info(
-      { client: this.getClientName(ws), message },
-      "Sending a message to a client."
-    );
-
-    ws.send(message);
+    ws.on("message", (data) => this.handleReceiveMessageFromClient(ws, data));
+    ws.on("close", () => this.handleDisconnection(ws));
+    ws.on("error", () => this.handleClientError(ws));
+    ws.on("unexpected-response", () => this.handleClientUnexpectedResponse(ws));
   };
 
   public handleUpgradeRequest = async (
@@ -48,9 +38,12 @@ export class ChatsinoController {
       const client = await authenticate();
 
       wss.handleUpgrade(request, socket, head, (ws) => {
-        this.logger.info({ client: client.name }, "Client authenticated.");
-
         this.socketToClientMap.set(ws, client);
+
+        this.logger.info(
+          { client: this.getClientName(ws) },
+          "Client authenticated."
+        );
 
         wss.emit("connection", ws, request);
       });
@@ -62,9 +55,70 @@ export class ChatsinoController {
     }
   };
 
+  private handleReceiveMessageFromClient = (ws: WebSocket, data: RawData) => {
+    const message = data.toString();
+
+    this.logger.info(
+      { client: this.getClientName(ws), message },
+      "Received a message from a client."
+    );
+
+    // Do stuff.
+  };
+
+  private handleSendMessageToClient = (ws: WebSocket, message: string) => {
+    this.logger.info(
+      { client: this.getClientName(ws), message },
+      "Sending a message to a client."
+    );
+
+    ws.send(message);
+  };
+
+  private handleDisconnection = (ws: WebSocket) => {
+    this.logger.info(
+      {
+        client: this.getClientName(ws),
+        "connection duration": `${this.getClientTimeConnected(ws)}s`,
+        "clients connected": this.socketToClientMap.size,
+      },
+      "Client disconnected."
+    );
+
+    this.socketToClientMap.delete(ws);
+  };
+
+  private handleClientError = (ws: WebSocket) => {
+    this.logger.error(
+      {
+        client: this.getClientName(ws),
+      },
+      "Client experienced an error."
+    );
+
+    // Handle.
+  };
+
+  private handleClientUnexpectedResponse = (ws: WebSocket) => {
+    this.logger.error(
+      {
+        client: this.getClientName(ws),
+      },
+      "Client experienced an unexpected response."
+    );
+
+    // Handle.
+  };
+
   private getClientName = (ws: WebSocket) => {
     const client = this.socketToClientMap.get(ws);
 
     return client?.name ?? "<unknown>";
+  };
+
+  private getClientTimeConnected = (ws: WebSocket) => {
+    const client = this.socketToClientMap.get(ws);
+
+    return client ? secondsSince(client.connectedAt) : "<unknown>";
   };
 }
