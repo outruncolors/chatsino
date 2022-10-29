@@ -5,11 +5,15 @@
   "license": "MIT",
   "scripts": {
     "build": "esbuild ./src --platform=node --bundle --outfile=build/chatsino.js",
-    "start": "yarn build && node build/chatsino"
+    "start": "yarn build && node build/chatsino | npx pino-pretty"
   },
   "dependencies": {
+    "@types/pino": "^7.0.5",
+    "@types/uuid4": "^2.0.0",
     "@types/ws": "^8.5.3",
     "esbuild": "^0.15.12",
+    "pino": "^8.7.0",
+    "uuid4": "^2.0.3",
     "ws": "^8.10.0"
   },
   "optionalDependencies": {
@@ -17,6 +21,7 @@
     "utf-8-validate": "^5.0.10"
   },
   "devDependencies": {
-    "@types/node": "^18.11.7"
+    "@types/node": "^18.11.7",
+    "pino-pretty": "^9.1.1"
   }
 }

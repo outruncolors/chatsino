@@ -11,6 +11,7 @@ function useSocket() {
 
       socket.current.onopen = function handleSocketOpen(event) {
         console.log("Opened connection.", event);
+        socket.current?.send("AYY!");
       };
 
       socket.current.onclose = function handleSocketClose(event) {
