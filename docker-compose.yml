@@ -15,26 +15,26 @@ services:
       - database:/var/lib/postgresql/data
       - ./database/init.sql:/docker-entrypoint-initdb.d/create_tables.sql
 
-  server:
-    container_name: server
-    restart: always
-    working_dir: /server
-    build:
-      context: ./server
-      dockerfile: Dockerfile
-    depends_on:
-      - database
-    links:
-      - database
-    ports:
-      - 9001:9001
+  # server:
+  #   container_name: server
+  #   restart: always
+  #   working_dir: /server
+  #   build:
+  #     context: ./server
+  #     dockerfile: Dockerfile
+  #   depends_on:
+  #     - database
+  #   links:
+  #     - database
+  #   ports:
+  #     - 9001:9001
 
-  client:
-    container_name: client
-    working_dir: /client
-    build:
-      context: ./client
-      dockerfile: Dockerfile
+  # client:
+  #   container_name: client
+  #   working_dir: /client
+  #   build:
+  #     context: ./client
+  #     dockerfile: Dockerfile
 
 volumes:
   database:

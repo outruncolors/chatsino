@@ -30,6 +30,8 @@ const options = {
     "better-sqlite3",
     "sqlite3",
     "pg-native",
+    "mock-aws-s3",
+    "aws-sdk",
   ],
 };
 

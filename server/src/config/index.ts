@@ -18,5 +18,9 @@ export const SSL_KEY_PATH = path.join(__dirname, "../.ssh/localhost-key.pem");
 export const POSTGRES_CONNECTION_STRING =
   process.env.POSTGRES_CONNECTION_STRING;
 
-// How many rounds when generating a salt for sensitive data hashing?
-export const SALT_ROUNDS = 12;
+// Hashing & Salting
+export const SALT_SIZE = 128;
+
+export const HASH_SIZE = 60;
+
+export const MINIMUM_PASSWORD_SIZE = 8;
