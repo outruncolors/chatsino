@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 
-const SERVER_ADDRESS = "wss://localhost:8080";
+const SERVER_ADDRESS = "wss://localhost:8080?jwt=foo";
 
 function useSocket() {
   const socket = useRef<null | WebSocket>(null);
