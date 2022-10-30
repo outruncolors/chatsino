@@ -5,6 +5,7 @@ import { SocketController } from "controllers";
 import { ChatsinoLogger } from "logging";
 import { ClientRepository } from "repositories";
 import * as config from "config";
+import { TestService } from "services";
 
 (async () => {
   await ClientRepository.instance.initialize();
@@ -38,4 +39,6 @@ import * as config from "config";
     );
     process.exit(1);
   });
+
+  TestService.instance.signinFirstUser();
 })();

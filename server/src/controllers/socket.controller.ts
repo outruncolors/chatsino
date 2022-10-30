@@ -13,20 +13,41 @@ export class SocketController {
   private socketToClientMap = new Map<WebSocket, AuthorizedClient>();
 
   public handleConnection = async (ws: WebSocket, request: IncomingMessage) => {
-    this.logger.info(
-      {
-        client: this.getClientName(ws),
-        "clients connected": this.socketToClientMap.size,
-      },
-      "Client connected."
-    );
+    try {
+      this.logger.info("A Client is attempting to connect.");
 
-    this.verifyRequestToken(request);
+      const client = this.socketToClientMap.get(ws);
 
-    ws.on("message", (data) => this.handleReceiveMessageFromClient(ws, data));
-    ws.on("close", () => this.handleDisconnection(ws));
-    ws.on("error", () => this.handleClientError(ws));
-    ws.on("unexpected-response", () => this.handleClientUnexpectedResponse(ws));
+      if (client) {
+        await this.authorizationService.validateToken(client.token);
+
+        ws.on("message", (data) =>
+          this.handleReceiveMessageFromClient(ws, data)
+        );
+        ws.on("close", () => this.handleDisconnection(ws));
+        ws.on("error", () => this.handleClientError(ws));
+        ws.on("unexpected-response", () =>
+          this.handleClientUnexpectedResponse(ws)
+        );
+
+        this.logger.info(
+          {
+            client: this.getClientName(ws),
+            "clients connected": this.socketToClientMap.size,
+          },
+          "Client successfully connected."
+        );
+      } else {
+        throw new Error(
+          "Client attempted to connect without authenticating first."
+        );
+      }
+    } catch (error) {
+      this.logger.error(
+        { error: (error as Error).message },
+        "Client failed to connect."
+      );
+    }
   };
 
   public handleUpgradeRequest = async (
@@ -149,33 +170,5 @@ export class SocketController {
     const client = this.socketToClientMap.get(ws);
 
     return client ? secondsSince(client.connectedAt) : "<unknown>";
-  };
-
-  private verifyRequestToken = async (request: IncomingMessage) => {
-    try {
-      this.logger.info("Verifying a request token.");
-
-      if (request.url) {
-        const url = new URL(request.url, `http://${request.headers.host}`);
-        const token = url.searchParams.get("jwt");
-
-        if (!token) {
-          throw new Error(`Missing required "jwt" query parameter.`);
-        }
-
-        await this.authorizationService.validateToken(token);
-
-        this.logger.info("Verified a request token.");
-      } else {
-        throw new Error("Request is missing URL.");
-      }
-    } catch (error) {
-      this.logger.error(
-        { error: (error as Error).message },
-        "Unable to verify request token."
-      );
-
-      throw error;
-    }
   };
 }

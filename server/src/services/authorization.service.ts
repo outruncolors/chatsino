@@ -3,6 +3,7 @@ import { ChatsinoLogger } from "logging";
 import { Client, ClientRepository } from "repositories";
 import { now } from "helpers";
 import * as config from "config";
+import { CacheService } from "./cache.service";
 
 export interface AuthorizedClient extends Omit<Client, "hash" | "salt"> {
   connectedAt: number;
@@ -12,8 +13,9 @@ export interface AuthorizedClient extends Omit<Client, "hash" | "salt"> {
 export class AuthorizationService {
   public static instance = new AuthorizationService();
 
-  private clientRepository = ClientRepository.instance;
   private logger = ChatsinoLogger.instance;
+  private clientRepository = ClientRepository.instance;
+  private cacheService = CacheService.instance;
 
   public async signup(
     username: string,
@@ -40,7 +42,7 @@ export class AuthorizationService {
           id: client.id,
           username: client.username,
           connectedAt: now(),
-          token: "MY_TOKEN",
+          token: await this.generateClientSessionToken(username),
         };
       } else {
         throw new Error(
@@ -76,7 +78,7 @@ export class AuthorizationService {
             id: client.id,
             username: client.username,
             connectedAt: now(),
-            token: "MY_TOKEN",
+            token: await this.generateClientSessionToken(username),
           };
         } else {
           throw new Error(`Client provided an invalid password.`);
@@ -94,9 +96,30 @@ export class AuthorizationService {
     }
   }
 
+  public async signout(username: string) {
+    try {
+      this.logger.info({ username }, "A client is attempting to sign out.");
+
+      await this.destroyClientSessionToken(username);
+
+      this.logger.info({ username }, "A client successfully signed out.");
+    } catch (error) {
+      this.logger.error(
+        { username, error: (error as Error).message },
+        "A client was unable to sign out."
+      );
+
+      throw error;
+    }
+  }
+
   public async validateToken(token: string) {
-    /** @todo Use jwt.verify in tandem with Redis to minimize verification trips. */
-    return true;
+    try {
+      await this.cacheService.verifyToken(token);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   private generateHash(input: string, salt: string): Promise<string> {
@@ -104,6 +127,27 @@ export class AuthorizationService {
       scrypt(input, salt, config.HASH_SIZE, (err, hash) =>
         err ? reject(err) : resolve(hash.toString("hex"))
       )
+    );
+  }
+
+  private formatClientSessionLabel(username: string) {
+    return `${username}/Session`;
+  }
+
+  private async generateClientSessionToken(username: string) {
+    const token = await this.cacheService.createToken(
+      this.formatClientSessionLabel(username),
+      {
+        username,
+      }
+    );
+
+    return token;
+  }
+
+  private destroyClientSessionToken(username: string) {
+    return this.cacheService.destroyToken(
+      this.formatClientSessionLabel(username)
     );
   }
 }

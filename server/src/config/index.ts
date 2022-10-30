@@ -24,3 +24,8 @@ export const SALT_SIZE = 128;
 export const HASH_SIZE = 60;
 
 export const MINIMUM_PASSWORD_SIZE = 8;
+
+// JSON Web Tokens
+export const JWT_SECRET = process.env.JWT_SECRET;
+
+export const JWT_EXPIRATON_TIME = 60 * 20; // Twenty minutes.
