@@ -5,7 +5,7 @@ import { now } from "helpers";
 import * as config from "config";
 import { CacheService } from "./cache.service";
 
-export interface AuthorizedClient extends Omit<Client, "hash" | "salt"> {
+export interface AuthenticatedClient extends Omit<Client, "hash" | "salt"> {
   connectedAt: number;
   tokens: {
     access: string;
@@ -13,8 +13,8 @@ export interface AuthorizedClient extends Omit<Client, "hash" | "salt"> {
   };
 }
 
-export class AuthorizationService {
-  public static instance = new AuthorizationService();
+export class AuthenticationService {
+  public static instance = new AuthenticationService();
 
   private logger = ChatsinoLogger.instance;
   private clientRepository = ClientRepository.instance;
@@ -23,7 +23,7 @@ export class AuthorizationService {
   public async signup(
     username: string,
     password: string
-  ): Promise<AuthorizedClient> {
+  ): Promise<AuthenticatedClient> {
     try {
       this.logger.info(
         { client: username },
@@ -63,7 +63,7 @@ export class AuthorizationService {
   public async signin(
     username: string,
     password: string
-  ): Promise<AuthorizedClient> {
+  ): Promise<AuthenticatedClient> {
     try {
       this.logger.info(
         { client: username },
@@ -131,7 +131,7 @@ export class AuthorizationService {
     }
   }
 
-  public async refreshToken(client: AuthorizedClient) {
+  public async refreshToken(client: AuthenticatedClient) {
     try {
       this.logger.info(
         { client: client.username },
@@ -175,12 +175,21 @@ export class AuthorizationService {
     );
   }
 
-  private formatClientAccessLabel(username: string) {
-    return `${username}/Access`;
+  private async createAuthorizedClient(client: Client) {
+    return {
+      id: client.id,
+      username: client.username,
+      connectedAt: now(),
+      tokens: {
+        access: await this.createClientAccessToken(client.username),
+        refresh: await this.createClientRefreshToken(client.username),
+      },
+    };
   }
 
-  private formatClientRefreshLabel(username: string) {
-    return `${username}/Refresh`;
+  // Access Tokens
+  private formatClientAccessLabel(username: string) {
+    return `${username}/Access`;
   }
 
   private createClientAccessToken(username: string) {
@@ -200,6 +209,11 @@ export class AuthorizationService {
     );
   }
 
+  // Refresh Tokens
+  private formatClientRefreshLabel(username: string) {
+    return `${username}/Refresh`;
+  }
+
   private createClientRefreshToken(username: string) {
     return this.cacheService.createToken(
       this.formatClientRefreshLabel(username),
@@ -215,17 +229,5 @@ export class AuthorizationService {
     return this.cacheService.destroyToken(
       this.formatClientRefreshLabel(username)
     );
-  }
-
-  private async createAuthorizedClient(client: Client) {
-    return {
-      id: client.id,
-      username: client.username,
-      connectedAt: now(),
-      tokens: {
-        access: await this.createClientAccessToken(client.username),
-        refresh: await this.createClientRefreshToken(client.username),
-      },
-    };
   }
 }

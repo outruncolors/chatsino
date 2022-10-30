@@ -3,14 +3,14 @@ import { Duplex } from "stream";
 import { RawData, WebSocket, WebSocketServer } from "ws";
 import { ChatsinoLogger } from "logging";
 import { secondsSince } from "helpers";
-import { AuthorizationService, AuthorizedClient } from "services";
+import { AuthenticationService, AuthenticatedClient } from "services";
 
 export class SocketController {
   public static instance = new SocketController();
 
   private logger = ChatsinoLogger.instance;
-  private authorizationService = AuthorizationService.instance;
-  private socketToClientMap = new Map<WebSocket, AuthorizedClient>();
+  private authorizationService = AuthenticationService.instance;
+  private socketToClientMap = new Map<WebSocket, AuthenticatedClient>();
 
   public handleConnection = async (ws: WebSocket) => {
     try {

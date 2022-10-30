@@ -1,5 +1,5 @@
 import { ChatsinoLogger } from "logging";
-import { AuthorizationService } from "./authorization.service";
+import { AuthenticationService } from "./authentication.service";
 
 const USERNAME = "user7";
 const PASSWORD = "password";
@@ -8,7 +8,7 @@ export class TestService {
   public static instance = new TestService();
 
   private logger = ChatsinoLogger.instance;
-  private authorizationService = AuthorizationService.instance;
+  private authorizationService = AuthenticationService.instance;
 
   public async createFirstUser() {
     try {
