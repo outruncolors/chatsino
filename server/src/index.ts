@@ -3,7 +3,11 @@ import { readFileSync } from "fs";
 import { WebSocketServer } from "ws";
 import { ChatsinoController } from "controllers";
 import { ChatsinoLogger } from "logging";
+import { ChatsinoRepository } from "repositories";
 import * as config from "config";
+
+// Initialize the database connection.
+ChatsinoRepository.instance.initialize();
 
 const server = createServer({
   cert: readFileSync(config.SSL_CERTIFICATE_PATH),

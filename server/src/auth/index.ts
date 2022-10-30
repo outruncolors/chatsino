@@ -3,13 +3,13 @@ import { now } from "helpers";
 
 export interface ChatsinoClient {
   id: string;
-  name: string;
+  username: string;
   connectedAt: number;
 }
 
 const EXAMPLE_CLIENT: ChatsinoClient = {
   id: uuid4(),
-  name: "Bob",
+  username: "Bob",
   connectedAt: now(),
 };
 

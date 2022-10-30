@@ -19,9 +19,18 @@ const options = {
   define: {
     "process.env.NODE_ENV": `"${process.env.NODE_ENV ?? "development"}"`,
     "process.env.VERSION": `"${package.version}"`,
-    "process.env.DEBUG": process.env.DEBUG,
     "process.env.PORT": process.env.PORT,
+    "process.env.POSTGRES_CONNECTION_STRING": `"${process.env.POSTGRES_CONNECTION_STRING}"`,
   },
+  external: [
+    "mysql2",
+    "tedious",
+    "oracledb",
+    "mysql",
+    "better-sqlite3",
+    "sqlite3",
+    "pg-native",
+  ],
 };
 
 build(options).catch(() => process.exit(1));

@@ -113,7 +113,7 @@ export class ChatsinoController {
   private getClientName = (ws: WebSocket) => {
     const client = this.socketToClientMap.get(ws);
 
-    return client?.name ?? "<unknown>";
+    return client?.username ?? "<unknown>";
   };
 
   private getClientTimeConnected = (ws: WebSocket) => {

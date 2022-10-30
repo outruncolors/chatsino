@@ -8,11 +8,15 @@
     "start": "NODE_ENV=development yarn build && node build/chatsino | npx pino-pretty"
   },
   "dependencies": {
+    "@types/knex": "^0.16.1",
     "@types/pino": "^7.0.5",
     "@types/uuid4": "^2.0.0",
     "@types/ws": "^8.5.3",
     "dotenv": "^16.0.3",
     "esbuild": "^0.15.12",
+    "knex": "^2.3.0",
+    "pg": "^8.8.0",
+    "pg-query-stream": "^4.2.4",
     "pino": "^8.7.0",
     "uuid4": "^2.0.3",
     "ws": "^8.10.0"
