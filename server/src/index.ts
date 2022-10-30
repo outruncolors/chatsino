@@ -4,6 +4,7 @@ import { WebSocketServer } from "ws";
 import { ChatsinoController } from "controllers";
 import { ChatsinoLogger } from "logging";
 import { ClientRepository } from "repositories";
+import { TestService } from "services";
 import * as config from "config";
 
 (async () => {
@@ -39,4 +40,9 @@ import * as config from "config";
     );
     process.exit(1);
   });
+
+  if (config.DEBUG) {
+    await TestService.instance.createFirstUser();
+    await TestService.instance.signinFirstUser();
+  }
 })();

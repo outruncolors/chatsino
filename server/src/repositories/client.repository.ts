@@ -20,17 +20,15 @@ export class ClientRepository {
     searchPath: ["knex", "public"],
   });
 
-  private clientQueries = this.database<Client>("clients");
-
   public async getClientByUsername(username: string) {
-    return this.clientQueries.where("username", username).first();
+    return this.database<Client>("clients").where("username", username).first();
   }
 
   public async createClient(username: string, hash: string, salt: string) {
     try {
       this.logger.info({ username, hash, salt }, "Creating a Client.");
 
-      const client = await this.clientQueries.insert({
+      await this.database<Client>("clients").insert({
         username,
         hash,
         salt,
@@ -42,6 +40,8 @@ export class ClientRepository {
         { error: (error as Error).message },
         "Failed to create Client."
       );
+
+      throw error;
     }
   }
 
@@ -57,6 +57,8 @@ export class ClientRepository {
         { error: (error as Error).message },
         "Failed to initialize Client repository."
       );
+
+      throw error;
     }
   }
 
@@ -71,8 +73,8 @@ export class ClientRepository {
       await this.database.schema.createTable("clients", (table) => {
         table.increments();
         table.string("username").unique();
-        table.specificType("hash", `CHAR(${config.HASH_SIZE}) DEFAULT NULL`);
-        table.specificType("salt", `CHAR(${config.SALT_SIZE}) DEFAULT NULL`);
+        table.specificType("hash", `CHAR(120) DEFAULT NULL`);
+        table.specificType("salt", `CHAR(256) DEFAULT NULL`);
         table.timestamps();
       });
 

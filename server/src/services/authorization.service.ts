@@ -30,6 +30,8 @@ export class AuthorizationService {
       const salt = randomBytes(config.SALT_SIZE).toString("hex");
       const hash = await this.generateHash(password, salt);
 
+      this.logger.debug({ salt: salt.length, hash: hash.length }, "LENGTH");
+
       await this.clientRepository.createClient(username, hash, salt);
 
       const client = await this.clientRepository.getClientByUsername(username);
