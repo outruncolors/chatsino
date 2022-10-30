@@ -1,13 +1,13 @@
 import { createServer } from "https";
 import { readFileSync } from "fs";
-import path from "path";
 import { WebSocketServer } from "ws";
-import { ChatsinoController } from "controller";
+import { ChatsinoController } from "controllers";
 import { ChatsinoLogger } from "logging";
+import * as config from "config";
 
 const server = createServer({
-  cert: readFileSync(path.join(__dirname, "../.ssh/localhost.pem")),
-  key: readFileSync(path.join(__dirname, "../.ssh/localhost-key.pem")),
+  cert: readFileSync(config.SSL_CERTIFICATE_PATH),
+  key: readFileSync(config.SSL_KEY_PATH),
 });
 
 const wss = new WebSocketServer({ noServer: true });
@@ -18,9 +18,9 @@ server.on("upgrade", (request, socket, head) =>
   ChatsinoController.instance.handleUpgradeRequest(wss, request, socket, head)
 );
 
-ChatsinoLogger.instance.info({ port: 8080 }, "Server is listening.");
+ChatsinoLogger.instance.info({ port: config.PORT }, "Server is listening.");
 
-server.listen(8080);
+server.listen(config.PORT);
 
 // Protect against bubbled-up rejections and errors.
 process.on("uncaughtException", (error) => {

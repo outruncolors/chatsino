@@ -4,13 +4,14 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "build": "esbuild ./src --platform=node --bundle --outfile=build/chatsino.js",
-    "start": "yarn build && node build/chatsino | npx pino-pretty"
+    "build": "node ./esbuild",
+    "start": "NODE_ENV=development yarn build && node build/chatsino | npx pino-pretty"
   },
   "dependencies": {
     "@types/pino": "^7.0.5",
     "@types/uuid4": "^2.0.0",
     "@types/ws": "^8.5.3",
+    "dotenv": "^16.0.3",
     "esbuild": "^0.15.12",
     "pino": "^8.7.0",
     "uuid4": "^2.0.3",
