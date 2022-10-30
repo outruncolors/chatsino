@@ -8,7 +8,6 @@
     "start": "NODE_ENV=development yarn build && node build/chatsino | npx pino-pretty"
   },
   "dependencies": {
-    "@mapbox/node-pre-gyp": "^1.0.10",
     "@types/knex": "^0.16.1",
     "@types/pino": "^7.0.5",
     "@types/uuid4": "^2.0.0",

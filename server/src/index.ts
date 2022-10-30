@@ -1,10 +1,9 @@
 import { createServer } from "https";
 import { readFileSync } from "fs";
 import { WebSocketServer } from "ws";
-import { ChatsinoController } from "controllers";
+import { SocketController } from "controllers";
 import { ChatsinoLogger } from "logging";
 import { ClientRepository } from "repositories";
-import { TestService } from "services";
 import * as config from "config";
 
 (async () => {
@@ -17,17 +16,16 @@ import * as config from "config";
 
   const wss = new WebSocketServer({ noServer: true });
 
-  wss.on("connection", ChatsinoController.instance.handleConnection);
+  wss.on("connection", SocketController.instance.handleConnection);
 
   server.on("upgrade", (request, socket, head) =>
-    ChatsinoController.instance.handleUpgradeRequest(wss, request, socket, head)
+    SocketController.instance.handleUpgradeRequest(wss, request, socket, head)
   );
 
-  ChatsinoLogger.instance.info({ port: config.PORT }, "Server is listening.");
+  server.listen(config.PORT, () => {
+    ChatsinoLogger.instance.info({ port: config.PORT }, "Server is listening.");
+  });
 
-  server.listen(config.PORT);
-
-  // Protect against bubbled-up rejections and errors.
   process.on("uncaughtException", (error) => {
     ChatsinoLogger.instance.fatal({ error }, "Detected an uncaught exception.");
     process.exit(1);
@@ -40,9 +38,4 @@ import * as config from "config";
     );
     process.exit(1);
   });
-
-  if (config.DEBUG) {
-    await TestService.instance.createFirstUser();
-    await TestService.instance.signinFirstUser();
-  }
 })();

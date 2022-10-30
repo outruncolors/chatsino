@@ -6,6 +6,7 @@ import * as config from "config";
 
 export interface AuthorizedClient extends Omit<Client, "hash" | "salt"> {
   connectedAt: number;
+  token: string;
 }
 
 export class AuthorizationService {
@@ -17,7 +18,7 @@ export class AuthorizationService {
   public async signup(
     username: string,
     password: string
-  ): Promise<AuthorizedClient | undefined> {
+  ): Promise<AuthorizedClient> {
     try {
       this.logger.info({ username }, "A client is attempting to sign up.");
 
@@ -30,8 +31,6 @@ export class AuthorizationService {
       const salt = randomBytes(config.SALT_SIZE).toString("hex");
       const hash = await this.generateHash(password, salt);
 
-      this.logger.debug({ salt: salt.length, hash: hash.length }, "LENGTH");
-
       await this.clientRepository.createClient(username, hash, salt);
 
       const client = await this.clientRepository.getClientByUsername(username);
@@ -41,6 +40,7 @@ export class AuthorizationService {
           id: client.id,
           username: client.username,
           connectedAt: now(),
+          token: "MY_TOKEN",
         };
       } else {
         throw new Error(
@@ -60,7 +60,7 @@ export class AuthorizationService {
   public async signin(
     username: string,
     password: string
-  ): Promise<AuthorizedClient | undefined> {
+  ): Promise<AuthorizedClient> {
     try {
       this.logger.info({ username }, "A client is attempting to sign in.");
 
@@ -72,12 +72,11 @@ export class AuthorizationService {
         if (client.hash === hash) {
           this.logger.info({ username }, "A client successfully signed in.");
 
-          // Attach JWT.
-
           return {
             id: client.id,
             username: client.username,
             connectedAt: now(),
+            token: "MY_TOKEN",
           };
         } else {
           throw new Error(`Client provided an invalid password.`);
@@ -93,6 +92,11 @@ export class AuthorizationService {
 
       throw error;
     }
+  }
+
+  public async validateToken(token: string) {
+    /** @todo Use jwt.verify in tandem with Redis to minimize verification trips. */
+    return true;
   }
 
   private generateHash(input: string, salt: string): Promise<string> {
