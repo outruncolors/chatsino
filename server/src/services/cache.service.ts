@@ -17,7 +17,8 @@ export class CacheService {
 
   public async createToken(
     label: string,
-    values: Record<string, unknown> = {}
+    values: Record<string, unknown> = {},
+    expiresIn: number
   ) {
     try {
       if (!this.jwtRedis) {
@@ -28,7 +29,7 @@ export class CacheService {
 
       const payload = { jti: label, ...values };
       const token = await this.jwtRedis.sign(payload, config.JWT_SECRET, {
-        expiresIn: config.JWT_EXPIRATON_TIME,
+        expiresIn,
       });
 
       this.logger.info({ token }, "Successfully created a token.");

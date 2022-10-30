@@ -40,5 +40,6 @@ import { TestService } from "services";
     process.exit(1);
   });
 
+  await TestService.instance.createFirstUser();
   TestService.instance.signinFirstUser();
 })();

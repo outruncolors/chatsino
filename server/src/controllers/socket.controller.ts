@@ -12,36 +12,26 @@ export class SocketController {
   private authorizationService = AuthorizationService.instance;
   private socketToClientMap = new Map<WebSocket, AuthorizedClient>();
 
-  public handleConnection = async (ws: WebSocket, request: IncomingMessage) => {
+  public handleConnection = async (ws: WebSocket) => {
     try {
       this.logger.info("A Client is attempting to connect.");
 
-      const client = this.socketToClientMap.get(ws);
+      await this.verifyClient(ws);
 
-      if (client) {
-        await this.authorizationService.validateToken(client.token);
+      ws.on("message", (data) => this.handleReceiveMessageFromClient(ws, data));
+      ws.on("close", () => this.handleDisconnection(ws));
+      ws.on("error", () => this.handleClientError(ws));
+      ws.on("unexpected-response", () =>
+        this.handleClientUnexpectedResponse(ws)
+      );
 
-        ws.on("message", (data) =>
-          this.handleReceiveMessageFromClient(ws, data)
-        );
-        ws.on("close", () => this.handleDisconnection(ws));
-        ws.on("error", () => this.handleClientError(ws));
-        ws.on("unexpected-response", () =>
-          this.handleClientUnexpectedResponse(ws)
-        );
-
-        this.logger.info(
-          {
-            client: this.getClientName(ws),
-            "clients connected": this.socketToClientMap.size,
-          },
-          "Client successfully connected."
-        );
-      } else {
-        throw new Error(
-          "Client attempted to connect without authenticating first."
-        );
-      }
+      this.logger.info(
+        {
+          client: this.getClientName(ws),
+          "clients connected": this.socketToClientMap.size,
+        },
+        "Client successfully connected."
+      );
     } catch (error) {
       this.logger.error(
         { error: (error as Error).message },
@@ -92,22 +82,16 @@ export class SocketController {
     data: RawData
   ) => {
     try {
-      const client = this.socketToClientMap.get(ws);
+      await this.verifyClient(ws);
 
-      if (client) {
-        await this.authorizationService.validateToken(client.token);
+      const message = data.toString();
 
-        const message = data.toString();
+      this.logger.info(
+        { client: this.getClientName(ws), message },
+        "Received a message from a client."
+      );
 
-        this.logger.info(
-          { client: this.getClientName(ws), message },
-          "Received a message from a client."
-        );
-
-        // Do stuff.
-      } else {
-        throw new Error("Received message from unauthenticated Client.");
-      }
+      // Do stuff.
     } catch (error) {
       this.logger.error(
         { error: (error as Error).message },
@@ -170,5 +154,50 @@ export class SocketController {
     const client = this.socketToClientMap.get(ws);
 
     return client ? secondsSince(client.connectedAt) : "<unknown>";
+  };
+
+  private verifyClient = async (ws: WebSocket) => {
+    try {
+      this.logger.info(
+        { client: this.getClientName(ws) },
+        "Attempting to verify Client."
+      );
+
+      const client = this.socketToClientMap.get(ws);
+
+      if (client) {
+        const isValid = await this.authorizationService.validateToken(
+          client.tokens.access
+        );
+
+        if (isValid) {
+          this.logger.info(
+            { client: this.getClientName(ws) },
+            "Successfully verified Client."
+          );
+        } else {
+          this.logger.info(
+            { client: this.getClientName(ws) },
+            "Client's access token is no longer valid -- attempting to refresh."
+          );
+
+          await this.authorizationService.refreshToken(client);
+
+          this.logger.info(
+            { client: this.getClientName(ws) },
+            "Client's tokens were refreshed."
+          );
+        }
+      } else {
+        throw new Error("Client was not previously authenticated.");
+      }
+    } catch (error) {
+      this.logger.error(
+        { error: (error as Error).message },
+        "Failed to verify Client."
+      );
+
+      // Redirect client to initial screen and prompt signin.
+    }
   };
 }

@@ -28,4 +28,6 @@ export const MINIMUM_PASSWORD_SIZE = 8;
 // JSON Web Tokens
 export const JWT_SECRET = process.env.JWT_SECRET;
 
-export const JWT_EXPIRATON_TIME = 60 * 20; // Twenty minutes.
+export const JWT_ACCESS_EXPIRATON_TIME = 60 * 20; // Twenty minutes.
+
+export const JWT_REFRESH_EXPIRATION_TIME = 60 * 60 * 24; // One day.

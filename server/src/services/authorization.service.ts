@@ -7,7 +7,10 @@ import { CacheService } from "./cache.service";
 
 export interface AuthorizedClient extends Omit<Client, "hash" | "salt"> {
   connectedAt: number;
-  token: string;
+  tokens: {
+    access: string;
+    refresh: string;
+  };
 }
 
 export class AuthorizationService {
@@ -22,7 +25,10 @@ export class AuthorizationService {
     password: string
   ): Promise<AuthorizedClient> {
     try {
-      this.logger.info({ username }, "A client is attempting to sign up.");
+      this.logger.info(
+        { client: username },
+        "A Client is attempting to sign up."
+      );
 
       if (password.length < config.MINIMUM_PASSWORD_SIZE) {
         throw new Error(
@@ -38,12 +44,7 @@ export class AuthorizationService {
       const client = await this.clientRepository.getClientByUsername(username);
 
       if (client) {
-        return {
-          id: client.id,
-          username: client.username,
-          connectedAt: now(),
-          token: await this.generateClientSessionToken(username),
-        };
+        return this.createAuthorizedClient(client);
       } else {
         throw new Error(
           `Could not find new Client with username of ${username}.`
@@ -51,8 +52,8 @@ export class AuthorizationService {
       }
     } catch (error) {
       this.logger.error(
-        { username, error: (error as Error).message },
-        "A client was unable to sign up."
+        { client: username, error: (error as Error).message },
+        "A Client was unable to sign up."
       );
 
       throw error;
@@ -64,7 +65,10 @@ export class AuthorizationService {
     password: string
   ): Promise<AuthorizedClient> {
     try {
-      this.logger.info({ username }, "A client is attempting to sign in.");
+      this.logger.info(
+        { client: username },
+        "A Client is attempting to sign in."
+      );
 
       const client = await this.clientRepository.getClientByUsername(username);
 
@@ -72,14 +76,12 @@ export class AuthorizationService {
         const hash = await this.generateHash(password, client.salt);
 
         if (client.hash === hash) {
-          this.logger.info({ username }, "A client successfully signed in.");
+          this.logger.info(
+            { client: username },
+            "A Client successfully signed in."
+          );
 
-          return {
-            id: client.id,
-            username: client.username,
-            connectedAt: now(),
-            token: await this.generateClientSessionToken(username),
-          };
+          return await this.createAuthorizedClient(client);
         } else {
           throw new Error(`Client provided an invalid password.`);
         }
@@ -88,8 +90,8 @@ export class AuthorizationService {
       }
     } catch (error) {
       this.logger.error(
-        { username, error: (error as Error).message },
-        "A client was unable to sign in."
+        { client: username, error: (error as Error).message },
+        "A Client was unable to sign in."
       );
 
       throw error;
@@ -98,15 +100,22 @@ export class AuthorizationService {
 
   public async signout(username: string) {
     try {
-      this.logger.info({ username }, "A client is attempting to sign out.");
+      this.logger.info(
+        { client: username },
+        "A Client is attempting to sign out."
+      );
 
-      await this.destroyClientSessionToken(username);
+      await this.destroyClientAccessToken(username);
+      await this.destroyClientRefreshToken(username);
 
-      this.logger.info({ username }, "A client successfully signed out.");
+      this.logger.info(
+        { client: username },
+        "A Client successfully signed out."
+      );
     } catch (error) {
       this.logger.error(
-        { username, error: (error as Error).message },
-        "A client was unable to sign out."
+        { client: username, error: (error as Error).message },
+        "A Client was unable to sign out."
       );
 
       throw error;
@@ -122,6 +131,42 @@ export class AuthorizationService {
     }
   }
 
+  public async refreshToken(client: AuthorizedClient) {
+    try {
+      this.logger.info(
+        { client: client.username },
+        "A Client is attempting to refresh their access token."
+      );
+
+      const refreshTokenIsValid = await this.validateToken(
+        client.tokens.refresh
+      );
+
+      if (refreshTokenIsValid) {
+        client.tokens.access = await this.createClientAccessToken(
+          client.username
+        );
+        client.tokens.refresh = await this.createClientRefreshToken(
+          client.username
+        );
+      } else {
+        throw new Error("Refresh token is not valid.");
+      }
+
+      this.logger.info(
+        { client: client.username },
+        "A Client successfully refreshed their access token."
+      );
+    } catch (error) {
+      this.logger.error(
+        { client: client.username, error: (error as Error).message },
+        "A Client was unable to refresh their access token."
+      );
+
+      throw error;
+    }
+  }
+
   private generateHash(input: string, salt: string): Promise<string> {
     return new Promise((resolve, reject) =>
       scrypt(input, salt, config.HASH_SIZE, (err, hash) =>
@@ -130,24 +175,57 @@ export class AuthorizationService {
     );
   }
 
-  private formatClientSessionLabel(username: string) {
-    return `${username}/Session`;
+  private formatClientAccessLabel(username: string) {
+    return `${username}/Access`;
   }
 
-  private async generateClientSessionToken(username: string) {
-    const token = await this.cacheService.createToken(
-      this.formatClientSessionLabel(username),
+  private formatClientRefreshLabel(username: string) {
+    return `${username}/Refresh`;
+  }
+
+  private createClientAccessToken(username: string) {
+    return this.cacheService.createToken(
+      this.formatClientAccessLabel(username),
       {
         username,
-      }
+        kind: "access",
+      },
+      config.JWT_ACCESS_EXPIRATON_TIME
     );
-
-    return token;
   }
 
-  private destroyClientSessionToken(username: string) {
+  private destroyClientAccessToken(username: string) {
     return this.cacheService.destroyToken(
-      this.formatClientSessionLabel(username)
+      this.formatClientAccessLabel(username)
     );
+  }
+
+  private createClientRefreshToken(username: string) {
+    return this.cacheService.createToken(
+      this.formatClientRefreshLabel(username),
+      {
+        username,
+        kind: "refresh",
+      },
+      config.JWT_REFRESH_EXPIRATION_TIME
+    );
+  }
+
+  private destroyClientRefreshToken(username: string) {
+    return this.cacheService.destroyToken(
+      this.formatClientRefreshLabel(username)
+    );
+  }
+
+  private async createAuthorizedClient(client: Client) {
+    return {
+      id: client.id,
+      username: client.username,
+      connectedAt: now(),
+      tokens: {
+        access: await this.createClientAccessToken(client.username),
+        refresh: await this.createClientRefreshToken(client.username),
+      },
+    };
   }
 }

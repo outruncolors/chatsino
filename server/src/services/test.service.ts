@@ -1,7 +1,7 @@
 import { ChatsinoLogger } from "logging";
 import { AuthorizationService } from "./authorization.service";
 
-const USERNAME = "user6";
+const USERNAME = "user7";
 const PASSWORD = "password";
 
 export class TestService {
