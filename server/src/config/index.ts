@@ -1,6 +1,7 @@
 import path from "path";
 
 // Should debug functionality be enabled?
+export const DEBUG = process.env.NODE_ENV !== "production";
 
 // On what port should the server accept requests?
 export const PORT = process.env.PORT;
@@ -16,3 +17,6 @@ export const SSL_KEY_PATH = path.join(__dirname, "../.ssh/localhost-key.pem");
 // What is the connection string for Postgres?
 export const POSTGRES_CONNECTION_STRING =
   process.env.POSTGRES_CONNECTION_STRING;
+
+// How many rounds when generating a salt for sensitive data hashing?
+export const SALT_ROUNDS = 12;

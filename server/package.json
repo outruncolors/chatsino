@@ -8,10 +8,12 @@
     "start": "NODE_ENV=development yarn build && node build/chatsino | npx pino-pretty"
   },
   "dependencies": {
+    "@types/bcrypt": "^5.0.0",
     "@types/knex": "^0.16.1",
     "@types/pino": "^7.0.5",
     "@types/uuid4": "^2.0.0",
     "@types/ws": "^8.5.3",
+    "bcrypt": "^5.1.0",
     "dotenv": "^16.0.3",
     "esbuild": "^0.15.12",
     "knex": "^2.3.0",

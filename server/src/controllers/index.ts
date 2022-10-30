@@ -1,15 +1,16 @@
 import { IncomingMessage } from "http";
 import { Duplex } from "stream";
 import { RawData, WebSocket, WebSocketServer } from "ws";
-import { ChatsinoClient, authenticate } from "auth";
 import { ChatsinoLogger } from "logging";
 import { secondsSince } from "helpers";
+import { AuthorizationService, AuthorizedClient } from "services";
 
 export class ChatsinoController {
   public static instance = new ChatsinoController();
 
   private logger = ChatsinoLogger.instance;
-  private socketToClientMap = new Map<WebSocket, ChatsinoClient>();
+  private authorizationService = AuthorizationService.instance;
+  private socketToClientMap = new Map<WebSocket, AuthorizedClient>();
 
   public handleConnection = (ws: WebSocket, _: IncomingMessage) => {
     this.logger.info(
@@ -35,10 +36,10 @@ export class ChatsinoController {
     try {
       this.logger.info("Attempting to authenticate a client.");
 
-      const client = await authenticate();
+      const client = await this.authorizationService.signin("foo", "bar");
 
       wss.handleUpgrade(request, socket, head, (ws) => {
-        this.socketToClientMap.set(ws, client);
+        this.socketToClientMap.set(ws, client!);
 
         this.logger.info(
           { client: this.getClientName(ws) },
@@ -79,7 +80,7 @@ export class ChatsinoController {
     this.logger.info(
       {
         client: this.getClientName(ws),
-        "connection duration": `${this.getClientTimeConnected(ws)}s`,
+        "connection duration": `${this.getClientConnectionDuration(ws)}s`,
         "clients connected": this.socketToClientMap.size,
       },
       "Client disconnected."
@@ -116,7 +117,7 @@ export class ChatsinoController {
     return client?.username ?? "<unknown>";
   };
 
-  private getClientTimeConnected = (ws: WebSocket) => {
+  private getClientConnectionDuration = (ws: WebSocket) => {
     const client = this.socketToClientMap.get(ws);
 
     return client ? secondsSince(client.connectedAt) : "<unknown>";
