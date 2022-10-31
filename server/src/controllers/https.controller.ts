@@ -35,7 +35,7 @@ export class HttpsController {
         "Attempting to upgrade a connection from HTTP to WebSockets"
       );
 
-      this.socketController.add(request, socket, head);
+      await this.socketController.initializeSocket(request, socket, head);
 
       this.logger.info(
         "Successfully upgraded a connection from HTTP to WebSockets"

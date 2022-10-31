@@ -7,10 +7,6 @@ import { CacheService } from "./cache.service";
 
 export interface AuthenticatedClient extends Omit<Client, "hash" | "salt"> {
   connectedAt: number;
-  tokens: {
-    access: string;
-    refresh: string;
-  };
 }
 
 export class AuthenticationService {
@@ -135,39 +131,16 @@ export class AuthenticationService {
     }
   }
 
-  public async refreshToken(client: AuthenticatedClient) {
-    try {
-      this.logger.info(
-        { client: client.username },
-        "A client is attempting to refresh their access token."
-      );
+  public async refreshToken(token: string) {
+    const refreshTokenIsValid = await this.validateToken(token);
 
-      const refreshTokenIsValid = await this.validateToken(
-        client.tokens.refresh
-      );
-
-      if (refreshTokenIsValid) {
-        client.tokens.access = await this.createClientAccessToken(
-          client.username
-        );
-        client.tokens.refresh = await this.createClientRefreshToken(
-          client.username
-        );
-      } else {
-        throw new Error("Refresh token is not valid.");
-      }
-
-      this.logger.info(
-        { client: client.username },
-        "A client successfully refreshed their access token."
-      );
-    } catch (error) {
-      this.logger.error(
-        { client: client.username, error: (error as Error).message },
-        "A client was unable to refresh their access token."
-      );
-
-      throw error;
+    if (refreshTokenIsValid) {
+      return {
+        access: await this.createClientAccessToken(""),
+        refresh: await this.createClientRefreshToken(""),
+      };
+    } else {
+      throw new Error("Refresh token is not valid.");
     }
   }
 
@@ -184,10 +157,6 @@ export class AuthenticationService {
       id: client.id,
       username: client.username,
       connectedAt: now(),
-      tokens: {
-        access: await this.createClientAccessToken(client.username),
-        refresh: await this.createClientRefreshToken(client.username),
-      },
     };
   }
 

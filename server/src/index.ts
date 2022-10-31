@@ -1,4 +1,5 @@
 import express from "express";
+import bodyParser from "body-parser";
 import session from "express-session";
 import { createServer } from "https";
 import { readFileSync } from "fs";
@@ -18,6 +19,7 @@ import * as config from "config";
 
   // Application
   logger.info("Initializing application.");
+
   const app = express();
   const sessionParser = session({
     saveUninitialized: false,
@@ -26,13 +28,12 @@ import * as config from "config";
   });
 
   // -- Middleware
-  app.use(sessionParser);
+  app.use(sessionParser, bodyParser.json());
 
   // -- Routes
-
   // ---- Authentication
   const authenticationController = new AuthenticationController();
-  app.post("/signin", authenticationController.handleSigninRequest);
+  app.post("/api/signin", authenticationController.handleSigninRequest);
 
   // HTTPS / WebSocket Servers
   logger.info("Initializing HTTPS and WebSocket servers.");
