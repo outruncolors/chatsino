@@ -1,4 +1,4 @@
-import { IncomingMessage } from "http";
+import { Request } from "express";
 import { Server } from "https";
 import { Duplex } from "stream";
 import { ChatsinoLogger } from "logging";
@@ -26,7 +26,7 @@ export class HttpsController {
   public shutdown = () => this.handleClose();
 
   private handleUpgrade = async (
-    request: IncomingMessage,
+    request: Request,
     socket: Duplex,
     head: Buffer
   ) => {

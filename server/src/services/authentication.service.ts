@@ -27,7 +27,7 @@ export class AuthenticationService {
     try {
       this.logger.info(
         { client: username },
-        "A Client is attempting to sign up."
+        "A client is attempting to sign up."
       );
 
       if (password.length < config.MINIMUM_PASSWORD_SIZE) {
@@ -47,13 +47,13 @@ export class AuthenticationService {
         return this.createAuthenticatedClient(client);
       } else {
         throw new Error(
-          `Could not find new Client with username of ${username}.`
+          `Could not find new client with username of ${username}.`
         );
       }
     } catch (error) {
       this.logger.error(
         { client: username, error: (error as Error).message },
-        "A Client was unable to sign up."
+        "A client was unable to sign up."
       );
 
       throw error;
@@ -67,7 +67,7 @@ export class AuthenticationService {
     try {
       this.logger.info(
         { client: username },
-        "A Client is attempting to sign in."
+        "A client is attempting to sign in."
       );
 
       const client = await this.clientRepository.getClientByUsername(username);
@@ -82,20 +82,20 @@ export class AuthenticationService {
 
           this.logger.info(
             { client: username },
-            "A Client successfully signed in."
+            "A client successfully signed in."
           );
 
           return authenticatedClient;
         } else {
-          throw new Error(`Client provided an invalid password.`);
+          throw new Error(`client provided an invalid password.`);
         }
       } else {
-        throw new Error(`Client with username of ${username} was not found.`);
+        throw new Error(`client with username of ${username} was not found.`);
       }
     } catch (error) {
       this.logger.error(
         { client: username, error: (error as Error).message },
-        "A Client was unable to sign in."
+        "A client was unable to sign in."
       );
 
       throw error;
@@ -106,7 +106,7 @@ export class AuthenticationService {
     try {
       this.logger.info(
         { client: username },
-        "A Client is attempting to sign out."
+        "A client is attempting to sign out."
       );
 
       await this.destroyClientAccessToken(username);
@@ -114,12 +114,12 @@ export class AuthenticationService {
 
       this.logger.info(
         { client: username },
-        "A Client successfully signed out."
+        "A client successfully signed out."
       );
     } catch (error) {
       this.logger.error(
         { client: username, error: (error as Error).message },
-        "A Client was unable to sign out."
+        "A client was unable to sign out."
       );
 
       throw error;
@@ -139,7 +139,7 @@ export class AuthenticationService {
     try {
       this.logger.info(
         { client: client.username },
-        "A Client is attempting to refresh their access token."
+        "A client is attempting to refresh their access token."
       );
 
       const refreshTokenIsValid = await this.validateToken(
@@ -159,12 +159,12 @@ export class AuthenticationService {
 
       this.logger.info(
         { client: client.username },
-        "A Client successfully refreshed their access token."
+        "A client successfully refreshed their access token."
       );
     } catch (error) {
       this.logger.error(
         { client: client.username, error: (error as Error).message },
-        "A Client was unable to refresh their access token."
+        "A client was unable to refresh their access token."
       );
 
       throw error;

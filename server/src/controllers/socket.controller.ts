@@ -1,4 +1,5 @@
-import { IncomingMessage } from "http";
+import { Request, RequestHandler, Response } from "express";
+import { Session } from "express-session";
 import { Duplex } from "stream";
 import { RawData, WebSocket, WebSocketServer } from "ws";
 import { ChatsinoLogger } from "logging";
@@ -12,55 +13,50 @@ export class SocketController {
   private socketToClientMap = new Map<WebSocket, AuthenticatedClient>();
   private socketToAliveMap = new Map<WebSocket, boolean>();
   private wss: WebSocketServer;
+  private sessionParser: RequestHandler;
   private checkingForDeadConnections: NodeJS.Timeout;
 
-  public constructor(wss: WebSocketServer) {
+  public constructor(wss: WebSocketServer, sessionParser: RequestHandler) {
     wss.on("close", this.handleServerClose);
     wss.on("connection", this.handleConnection);
     wss.on("error", this.handleServerError);
 
     this.wss = wss;
+    this.sessionParser = sessionParser;
     this.checkingForDeadConnections = this.checkForDeadConnections();
   }
 
   public shutdown = () => this.handleServerClose();
 
-  public add = async (
-    request: IncomingMessage,
-    socket: Duplex,
-    head: Buffer
-  ) => {
-    try {
+  public add = async (request: Request, socket: Duplex, head: Buffer) =>
+    this.sessionParser(request, {} as unknown as Response, async () => {
       this.logger.info("Attempting to authenticate a client.");
 
-      const ws = await new Promise<WebSocket>((resolve) =>
-        this.wss.handleUpgrade(request, socket, head, resolve)
-      );
+      const session = request.session as Session & {
+        client: AuthenticatedClient;
+      };
 
-      const client = await this.authenticationService.signin(
-        "user6",
-        "password"
-      );
+      if (session.client) {
+        const ws = await new Promise<WebSocket>((resolve) =>
+          this.wss.handleUpgrade(request, socket, head, resolve)
+        );
 
-      this.socketToClientMap.set(ws, client);
-      this.socketToAliveMap.set(ws, true);
+        this.socketToClientMap.set(ws, session.client);
+        this.socketToAliveMap.set(ws, true);
 
-      this.logger.info(
-        { client: this.getClientName(ws) },
-        "Client successfully authenticated."
-      );
+        this.logger.info(
+          { client: this.getClientName(ws) },
+          "Client successfully authenticated."
+        );
 
-      this.wss.emit("connection", ws, request);
-    } catch (error) {
-      this.logger.error(
-        { error: (error as Error).message },
-        "Failed to authenticate client."
-      );
+        this.wss.emit("connection", ws, request);
+      } else {
+        this.logger.error("Failed to authenticate client.");
 
-      socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
-      socket.destroy();
-    }
-  };
+        socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
+        socket.destroy();
+      }
+    });
 
   private handleServerClose = () => {
     this.logger.info("SocketController is shutting down.");
@@ -110,38 +106,40 @@ export class SocketController {
 
   private checkForDeadConnections = () => {
     return setTimeout(() => {
-      this.logger.info("Checking for dead connections.");
+      if (this.wss.clients.size > 0) {
+        this.logger.info("Checking for dead connections.");
 
-      let terminationCount = 0;
+        let terminationCount = 0;
 
-      for (const ws of this.wss.clients) {
-        const isAlive = this.socketToAliveMap.get(ws);
+        for (const ws of this.wss.clients) {
+          const isAlive = this.socketToAliveMap.get(ws);
 
-        if (isAlive) {
-          this.socketToAliveMap.set(ws, false);
+          if (isAlive) {
+            this.socketToAliveMap.set(ws, false);
 
-          ws.ping();
-        } else {
-          this.logger.info(
-            { client: this.getClientName(ws) },
-            "Terminating a dead connection."
-          );
+            ws.ping();
+          } else {
+            this.logger.info(
+              { client: this.getClientName(ws) },
+              "Terminating a dead connection."
+            );
 
-          ws.terminate();
+            ws.terminate();
 
-          terminationCount++;
+            terminationCount++;
+          }
         }
+
+        if (terminationCount === 0) {
+          this.logger.info(`All connections were still alive.`);
+        } else {
+          this.logger.info(`Terminated ${terminationCount} dead connections.`);
+        }
+
+        this.logger.info("Finished checking for dead connections.");
       }
 
-      if (terminationCount === 0) {
-        this.logger.info(`All connections were still alive.`);
-      } else {
-        this.logger.info(`Terminated ${terminationCount} dead connections.`);
-      }
-
-      this.checkForDeadConnections();
-
-      this.logger.info("Finished checking for dead connections.");
+      this.checkingForDeadConnections = this.checkForDeadConnections();
     }, config.DEAD_CONNECTION_CHECK_RATE);
   };
 

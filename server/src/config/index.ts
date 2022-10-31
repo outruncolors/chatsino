@@ -19,7 +19,9 @@ export const SSL_KEY_PATH = path.join(__dirname, "../.ssh/localhost-key.pem");
 
 // What is the connection string for Postgres?
 export const POSTGRES_CONNECTION_STRING =
-  process.env.POSTGRES_CONNECTION_STRING;
+  process.env.POSTGRES_CONNECTION_STRING ?? "";
+
+export const SESSION_SECRET = process.env.SESSION_SECRET ?? "";
 
 // Hashing & Salting
 export const SALT_SIZE = 128;

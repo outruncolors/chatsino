@@ -1,25 +1,52 @@
+import express from "express";
+import session from "express-session";
 import { createServer } from "https";
 import { readFileSync } from "fs";
 import { WebSocketServer } from "ws";
-import { HttpsController, SocketController } from "controllers";
+import {
+  AuthenticationController,
+  HttpsController,
+  SocketController,
+} from "controllers";
 import { ChatsinoLogger } from "logging";
 import * as config from "config";
 
 (async () => {
   // Logging
   const logger = new ChatsinoLogger("Main");
-
   logger.info({ version: config.VERSION }, "Chatsino is starting up.");
+
+  // Application
+  logger.info("Initializing application.");
+  const app = express();
+  const sessionParser = session({
+    saveUninitialized: false,
+    secret: config.SESSION_SECRET,
+    resave: false,
+  });
+
+  // -- Middleware
+  app.use(sessionParser);
+
+  // -- Routes
+
+  // ---- Authentication
+  const authenticationController = new AuthenticationController();
+  app.post("/signin", authenticationController.handleSigninRequest);
 
   // HTTPS / WebSocket Servers
   logger.info("Initializing HTTPS and WebSocket servers.");
 
   const wss = new WebSocketServer({ noServer: true });
-  const socketController = new SocketController(wss);
-  const server = createServer({
-    cert: readFileSync(config.SSL_CERTIFICATE_PATH),
-    key: readFileSync(config.SSL_KEY_PATH),
-  });
+  const socketController = new SocketController(wss, sessionParser);
+
+  const server = createServer(
+    {
+      cert: readFileSync(config.SSL_CERTIFICATE_PATH),
+      key: readFileSync(config.SSL_KEY_PATH),
+    },
+    app
+  );
   const httpsController = new HttpsController(server, socketController);
 
   // Error Handling
