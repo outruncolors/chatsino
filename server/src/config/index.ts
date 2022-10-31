@@ -3,6 +3,9 @@ import path from "path";
 // Should debug functionality be enabled?
 export const DEBUG = process.env.NODE_ENV !== "production";
 
+// What year is it?
+export const VERSION = process.env.VERSION;
+
 // On what port should the server accept requests?
 export const PORT = process.env.PORT;
 

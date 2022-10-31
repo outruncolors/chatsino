@@ -6,12 +6,12 @@ import * as config from "config";
 export class CacheService {
   public static instance = new CacheService();
 
-  private logger = ChatsinoLogger.instance;
+  private logger = new ChatsinoLogger(this.constructor.name);
   private redisClient = createClient();
   private jwtRedis: null | JWTRedis = null;
 
   constructor() {
-    this.redisClient.on("error", this.handleRedisError.bind(this));
+    this.redisClient.on("error", this.handleRedisError);
     this.initializeJwtr();
   }
 
@@ -114,10 +114,10 @@ export class CacheService {
     }
   }
 
-  private handleRedisError(error: unknown) {
+  private handleRedisError = (error: unknown) => {
     this.logger.error(
       { error: (error as Error).toString() },
       "Redis encountered an error."
     );
-  }
+  };
 }

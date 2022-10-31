@@ -7,26 +7,26 @@ const PASSWORD = "password";
 export class TestService {
   public static instance = new TestService();
 
-  private logger = ChatsinoLogger.instance;
+  private logger = new ChatsinoLogger(this.constructor.name);
   private authorizationService = AuthenticationService.instance;
 
   public async createFirstUser() {
     try {
-      this.logger.info(null, "TEST) Creating first user.");
+      this.logger.info("Creating first user.");
 
       await this.authorizationService.signup(USERNAME, PASSWORD);
 
-      this.logger.info(null, "TEST) Created first user.");
+      this.logger.info("Created first user.");
     } catch {}
   }
 
   public async signinFirstUser() {
     try {
-      this.logger.info(null, "TEST) Signing in first user.");
+      this.logger.info("Signing in first user.");
 
       await this.authorizationService.signin(USERNAME, PASSWORD);
 
-      this.logger.info(null, "TEST) Signed in first user.");
+      this.logger.info("Signed in first user.");
     } catch {}
   }
 }

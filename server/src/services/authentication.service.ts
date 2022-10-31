@@ -16,7 +16,7 @@ export interface AuthenticatedClient extends Omit<Client, "hash" | "salt"> {
 export class AuthenticationService {
   public static instance = new AuthenticationService();
 
-  private logger = ChatsinoLogger.instance;
+  private logger = new ChatsinoLogger(this.constructor.name);
   private clientRepository = ClientRepository.instance;
   private cacheService = CacheService.instance;
 

@@ -1,14 +1,25 @@
-import pino from "pino";
+import pino, { Logger } from "pino";
 
 export class ChatsinoLogger {
-  public static instance = new ChatsinoLogger();
+  public debug;
+  public info;
+  public error;
+  public fatal;
+  public trace;
+  public warn;
 
-  private pino = pino();
+  private pino: Logger;
 
-  public debug = this.pino.debug.bind(this.pino);
-  public info = this.pino.info.bind(this.pino);
-  public error = this.pino.error.bind(this.pino);
-  public fatal = this.pino.fatal.bind(this.pino);
-  public trace = this.pino.trace.bind(this.pino);
-  public warn = this.pino.warn.bind(this.pino);
+  public constructor(name: string) {
+    this.pino = pino({
+      name,
+    });
+
+    this.debug = this.pino.debug.bind(this.pino);
+    this.info = this.pino.info.bind(this.pino);
+    this.error = this.pino.error.bind(this.pino);
+    this.fatal = this.pino.fatal.bind(this.pino);
+    this.trace = this.pino.trace.bind(this.pino);
+    this.warn = this.pino.warn.bind(this.pino);
+  }
 }

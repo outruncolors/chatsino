@@ -12,13 +12,17 @@ export interface Client {
 export class ClientRepository {
   public static instance = new ClientRepository();
 
-  private logger = ChatsinoLogger.instance;
+  private logger = new ChatsinoLogger(this.constructor.name);
 
   private database = knex({
     client: "pg",
     connection: config.POSTGRES_CONNECTION_STRING,
     searchPath: ["knex", "public"],
   });
+
+  public constructor() {
+    this.initialize();
+  }
 
   public async getClientByUsername(username: string) {
     return this.database<Client>("clients").where("username", username).first();

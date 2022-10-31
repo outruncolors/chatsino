@@ -7,15 +7,70 @@ import { AuthenticationService, AuthenticatedClient } from "services";
 import * as config from "config";
 
 export class SocketController {
-  public static instance = new SocketController();
-
-  private logger = ChatsinoLogger.instance;
-  private authorizationService = AuthenticationService.instance;
+  private logger = new ChatsinoLogger(this.constructor.name);
+  private authenticationService = AuthenticationService.instance;
   private socketToClientMap = new Map<WebSocket, AuthenticatedClient>();
   private socketToAliveMap = new Map<WebSocket, boolean>();
-  private checkingForDeadConnections: null | NodeJS.Timeout = null;
+  private wss: WebSocketServer;
+  private checkingForDeadConnections: NodeJS.Timeout;
 
-  public handleConnection = async (ws: WebSocket) => {
+  public constructor(wss: WebSocketServer) {
+    wss.on("close", this.handleServerClose);
+    wss.on("connection", this.handleConnection);
+    wss.on("error", this.handleServerError);
+
+    this.wss = wss;
+    this.checkingForDeadConnections = this.checkForDeadConnections();
+  }
+
+  public shutdown = () => this.handleServerClose();
+
+  public add = async (
+    request: IncomingMessage,
+    socket: Duplex,
+    head: Buffer
+  ) => {
+    try {
+      this.logger.info("Attempting to authenticate a client.");
+
+      const ws = await new Promise<WebSocket>((resolve) =>
+        this.wss.handleUpgrade(request, socket, head, resolve)
+      );
+
+      const client = await this.authenticationService.signin(
+        "user6",
+        "password"
+      );
+
+      this.socketToClientMap.set(ws, client);
+      this.socketToAliveMap.set(ws, true);
+
+      this.logger.info(
+        { client: this.getClientName(ws) },
+        "Client successfully authenticated."
+      );
+
+      this.wss.emit("connection", ws, request);
+    } catch (error) {
+      this.logger.error(
+        { error: (error as Error).message },
+        "Failed to authenticate client."
+      );
+
+      socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
+      socket.destroy();
+    }
+  };
+
+  private handleServerClose = () => {
+    this.logger.info("SocketController is shutting down.");
+
+    if (this.checkingForDeadConnections) {
+      clearTimeout(this.checkingForDeadConnections);
+    }
+  };
+
+  private handleConnection = async (ws: WebSocket) => {
     try {
       this.logger.info("A client is attempting to connect.");
 
@@ -44,7 +99,7 @@ export class SocketController {
     }
   };
 
-  public handleError = (error: Error) => {
+  private handleServerError = (error: Error) => {
     this.logger.error(
       { error: (error as Error).message },
       "Socket server encountered an error."
@@ -53,59 +108,13 @@ export class SocketController {
     // Handle.
   };
 
-  public handleClose = () => {
-    this.logger.info("SocketController is shutting down.");
-
-    if (this.checkingForDeadConnections) {
-      clearTimeout(this.checkingForDeadConnections);
-    }
-  };
-
-  public handleUpgradeRequest = async (
-    wss: WebSocketServer,
-    request: IncomingMessage,
-    socket: Duplex,
-    head: Buffer
-  ) => {
-    try {
-      this.logger.info("Attempting to authenticate a client.");
-
-      const ws = await new Promise<WebSocket>((resolve) =>
-        wss.handleUpgrade(request, socket, head, (ws) => resolve(ws))
-      );
-
-      const client = await this.authorizationService.signin(
-        "user6",
-        "password"
-      );
-
-      this.socketToClientMap.set(ws, client);
-      this.socketToAliveMap.set(ws, true);
-
-      this.logger.info(
-        { client: this.getClientName(ws) },
-        "Client successfully authenticated."
-      );
-
-      wss.emit("connection", ws, request);
-    } catch (error) {
-      this.logger.error(
-        { error: (error as Error).message },
-        "Failed to authenticate client."
-      );
-
-      socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
-      socket.destroy();
-    }
-  };
-
-  public checkForDeadConnections = (wss: WebSocketServer) => {
-    this.checkingForDeadConnections = setTimeout(() => {
+  private checkForDeadConnections = () => {
+    return setTimeout(() => {
       this.logger.info("Checking for dead connections.");
 
       let terminationCount = 0;
 
-      for (const ws of wss.clients) {
+      for (const ws of this.wss.clients) {
         const isAlive = this.socketToAliveMap.get(ws);
 
         if (isAlive) {
@@ -130,7 +139,7 @@ export class SocketController {
         this.logger.info(`Terminated ${terminationCount} dead connections.`);
       }
 
-      this.checkForDeadConnections(wss);
+      this.checkForDeadConnections();
 
       this.logger.info("Finished checking for dead connections.");
     }, config.DEAD_CONNECTION_CHECK_RATE);
@@ -217,7 +226,7 @@ export class SocketController {
       const client = this.socketToClientMap.get(ws);
 
       if (client) {
-        const isValid = await this.authorizationService.validateToken(
+        const isValid = await this.authenticationService.validateToken(
           client.tokens.access
         );
 
@@ -232,7 +241,7 @@ export class SocketController {
             "Client's access token is no longer valid -- attempting to refresh."
           );
 
-          await this.authorizationService.refreshToken(client);
+          await this.authenticationService.refreshToken(client);
 
           this.logger.info(
             { client: this.getClientName(ws) },
