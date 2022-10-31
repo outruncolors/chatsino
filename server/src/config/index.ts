@@ -31,3 +31,6 @@ export const JWT_SECRET = process.env.JWT_SECRET;
 export const JWT_ACCESS_EXPIRATON_TIME = 60 * 20; // Twenty minutes.
 
 export const JWT_REFRESH_EXPIRATION_TIME = 60 * 60 * 24; // One day.
+
+// Socket Management
+export const DEAD_CONNECTION_CHECK_RATE = 1000 * 30; // Thirty seconds.

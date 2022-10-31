@@ -44,7 +44,7 @@ export class AuthenticationService {
       const client = await this.clientRepository.getClientByUsername(username);
 
       if (client) {
-        return this.createAuthorizedClient(client);
+        return this.createAuthenticatedClient(client);
       } else {
         throw new Error(
           `Could not find new Client with username of ${username}.`
@@ -76,12 +76,16 @@ export class AuthenticationService {
         const hash = await this.generateHash(password, client.salt);
 
         if (client.hash === hash) {
+          const authenticatedClient = await this.createAuthenticatedClient(
+            client
+          );
+
           this.logger.info(
             { client: username },
             "A Client successfully signed in."
           );
 
-          return await this.createAuthorizedClient(client);
+          return authenticatedClient;
         } else {
           throw new Error(`Client provided an invalid password.`);
         }
@@ -175,7 +179,7 @@ export class AuthenticationService {
     );
   }
 
-  private async createAuthorizedClient(client: Client) {
+  private async createAuthenticatedClient(client: Client) {
     return {
       id: client.id,
       username: client.username,

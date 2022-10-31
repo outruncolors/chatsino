@@ -4,8 +4,8 @@ import { WebSocketServer } from "ws";
 import { SocketController } from "controllers";
 import { ChatsinoLogger } from "logging";
 import { ClientRepository } from "repositories";
-import * as config from "config";
 import { TestService } from "services";
+import * as config from "config";
 
 (async () => {
   await ClientRepository.instance.initialize();
@@ -17,7 +17,11 @@ import { TestService } from "services";
 
   const wss = new WebSocketServer({ noServer: true });
 
+  SocketController.instance.checkForDeadConnections(wss);
+
   wss.on("connection", SocketController.instance.handleConnection);
+  wss.on("error", SocketController.instance.handleError);
+  wss.on("close", SocketController.instance.handleClose);
 
   server.on("upgrade", (request, socket, head) =>
     SocketController.instance.handleUpgradeRequest(wss, request, socket, head)
@@ -29,6 +33,7 @@ import { TestService } from "services";
 
   process.on("uncaughtException", (error) => {
     ChatsinoLogger.instance.fatal({ error }, "Detected an uncaught exception.");
+    SocketController.instance.handleClose();
     process.exit(1);
   });
 
@@ -37,6 +42,7 @@ import { TestService } from "services";
       { error },
       "Detected an unhandled rejection."
     );
+    SocketController.instance.handleClose();
     process.exit(1);
   });
 

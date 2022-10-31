@@ -4,6 +4,7 @@ import { RawData, WebSocket, WebSocketServer } from "ws";
 import { ChatsinoLogger } from "logging";
 import { secondsSince } from "helpers";
 import { AuthenticationService, AuthenticatedClient } from "services";
+import * as config from "config";
 
 export class SocketController {
   public static instance = new SocketController();
@@ -11,16 +12,19 @@ export class SocketController {
   private logger = ChatsinoLogger.instance;
   private authorizationService = AuthenticationService.instance;
   private socketToClientMap = new Map<WebSocket, AuthenticatedClient>();
+  private socketToAliveMap = new Map<WebSocket, boolean>();
+  private checkingForDeadConnections: null | NodeJS.Timeout = null;
 
   public handleConnection = async (ws: WebSocket) => {
     try {
-      this.logger.info("A Client is attempting to connect.");
+      this.logger.info("A client is attempting to connect.");
 
       await this.verifyClient(ws);
 
-      ws.on("message", (data) => this.handleReceiveMessageFromClient(ws, data));
-      ws.on("close", () => this.handleDisconnection(ws));
+      ws.on("message", (data) => this.handleClientMessage(ws, data));
+      ws.on("close", () => this.handleClientClose(ws));
       ws.on("error", () => this.handleClientError(ws));
+      ws.on("pong", () => this.handleClientPong(ws));
       ws.on("unexpected-response", () =>
         this.handleClientUnexpectedResponse(ws)
       );
@@ -40,6 +44,23 @@ export class SocketController {
     }
   };
 
+  public handleError = (error: Error) => {
+    this.logger.error(
+      { error: (error as Error).message },
+      "Socket server encountered an error."
+    );
+
+    // Handle.
+  };
+
+  public handleClose = () => {
+    this.logger.info("SocketController is shutting down.");
+
+    if (this.checkingForDeadConnections) {
+      clearTimeout(this.checkingForDeadConnections);
+    }
+  };
+
   public handleUpgradeRequest = async (
     wss: WebSocketServer,
     request: IncomingMessage,
@@ -47,7 +68,7 @@ export class SocketController {
     head: Buffer
   ) => {
     try {
-      this.logger.info("Attempting to authenticate a Client.");
+      this.logger.info("Attempting to authenticate a client.");
 
       const ws = await new Promise<WebSocket>((resolve) =>
         wss.handleUpgrade(request, socket, head, (ws) => resolve(ws))
@@ -59,17 +80,18 @@ export class SocketController {
       );
 
       this.socketToClientMap.set(ws, client);
+      this.socketToAliveMap.set(ws, true);
 
       this.logger.info(
         { client: this.getClientName(ws) },
-        "Client authenticated."
+        "Client successfully authenticated."
       );
 
       wss.emit("connection", ws, request);
     } catch (error) {
       this.logger.error(
         { error: (error as Error).message },
-        "Failed to authenticate Client."
+        "Failed to authenticate client."
       );
 
       socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
@@ -77,10 +99,44 @@ export class SocketController {
     }
   };
 
-  private handleReceiveMessageFromClient = async (
-    ws: WebSocket,
-    data: RawData
-  ) => {
+  public checkForDeadConnections = (wss: WebSocketServer) => {
+    this.checkingForDeadConnections = setTimeout(() => {
+      this.logger.info("Checking for dead connections.");
+
+      let terminationCount = 0;
+
+      for (const ws of wss.clients) {
+        const isAlive = this.socketToAliveMap.get(ws);
+
+        if (isAlive) {
+          this.socketToAliveMap.set(ws, false);
+
+          ws.ping();
+        } else {
+          this.logger.info(
+            { client: this.getClientName(ws) },
+            "Terminating a dead connection."
+          );
+
+          ws.terminate();
+
+          terminationCount++;
+        }
+      }
+
+      if (terminationCount === 0) {
+        this.logger.info(`All connections were still alive.`);
+      } else {
+        this.logger.info(`Terminated ${terminationCount} dead connections.`);
+      }
+
+      this.checkForDeadConnections(wss);
+
+      this.logger.info("Finished checking for dead connections.");
+    }, config.DEAD_CONNECTION_CHECK_RATE);
+  };
+
+  private handleClientMessage = async (ws: WebSocket, data: RawData) => {
     try {
       await this.verifyClient(ws);
 
@@ -95,31 +151,13 @@ export class SocketController {
     } catch (error) {
       this.logger.error(
         { error: (error as Error).message },
-        "Failed to receive message from Client."
+        "Failed to receive message from client."
       );
     }
   };
 
-  private handleSendMessageToClient = (ws: WebSocket, message: string) => {
-    this.logger.info(
-      { client: this.getClientName(ws), message },
-      "Sending a message to a Client."
-    );
-
-    ws.send(message);
-  };
-
-  private handleDisconnection = (ws: WebSocket) => {
-    this.logger.info(
-      {
-        client: this.getClientName(ws),
-        "connection duration": `${this.getClientConnectionDuration(ws)}s`,
-        "clients connected": this.socketToClientMap.size,
-      },
-      "Client disconnected."
-    );
-
-    this.socketToClientMap.delete(ws);
+  private handleClientPong = (ws: WebSocket) => {
+    this.socketToAliveMap.set(ws, true);
   };
 
   private handleClientError = (ws: WebSocket) => {
@@ -144,6 +182,19 @@ export class SocketController {
     // Handle.
   };
 
+  private handleClientClose = (ws: WebSocket) => {
+    this.logger.info(
+      {
+        client: this.getClientName(ws),
+        "connection duration": `${this.getClientConnectionDuration(ws)}s`,
+        "clients connected": this.socketToClientMap.size,
+      },
+      "Client disconnected."
+    );
+
+    this.socketToClientMap.delete(ws);
+  };
+
   private getClientName = (ws: WebSocket) => {
     const client = this.socketToClientMap.get(ws);
 
@@ -160,7 +211,7 @@ export class SocketController {
     try {
       this.logger.info(
         { client: this.getClientName(ws) },
-        "Attempting to verify Client."
+        "Attempting to verify a client."
       );
 
       const client = this.socketToClientMap.get(ws);
@@ -173,7 +224,7 @@ export class SocketController {
         if (isValid) {
           this.logger.info(
             { client: this.getClientName(ws) },
-            "Successfully verified Client."
+            "Successfully verified a client."
           );
         } else {
           this.logger.info(
@@ -189,12 +240,12 @@ export class SocketController {
           );
         }
       } else {
-        throw new Error("Client was not previously authenticated.");
+        throw new Error("client was not previously authenticated.");
       }
     } catch (error) {
       this.logger.error(
         { error: (error as Error).message },
-        "Failed to verify Client."
+        "Failed to verify client."
       );
 
       // Redirect client to initial screen and prompt signin.
