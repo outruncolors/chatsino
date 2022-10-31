@@ -1,38 +1,23 @@
 import { useEffect, useRef } from "react";
-
-const SERVER_ADDRESS = "wss://localhost:8080?jwt=foo";
-
-function useSocket() {
-  const socket = useRef<null | WebSocket>(null);
-
-  useEffect(() => {
-    if (!socket.current) {
-      socket.current = new WebSocket(SERVER_ADDRESS);
-
-      socket.current.onopen = function handleSocketOpen(event) {
-        console.log("Opened connection.", event);
-        socket.current?.send("AYY!");
-      };
-
-      socket.current.onclose = function handleSocketClose(event) {
-        console.log("Closed connection.", event);
-      };
-
-      socket.current.onerror = function handleSocketError(event) {
-        console.log("Encountered error.", event);
-      };
-
-      socket.current.onmessage = function handleSocketMessage(event) {
-        console.log("Received message.", event);
-      };
-    }
-  });
-
-  return socket.current;
-}
+import { useAuthentication, useSocket } from "./hooks";
 
 export function App() {
-  useSocket();
+  const { signin } = useAuthentication();
+  const { initialize } = useSocket();
+  const signedIn = useRef(false);
+
+  useEffect(() => {
+    if (!signedIn.current) {
+      signedIn.current = true;
+
+      const handleSignin = async () => {
+        await signin("user6", "password");
+        initialize();
+      };
+
+      handleSignin();
+    }
+  }, [signin, initialize]);
 
   return (
     <div className="App">
