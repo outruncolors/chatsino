@@ -1,13 +1,17 @@
 import { useCallback, useMemo } from "react";
 import { axios } from "helpers";
 
+let _csrf = "";
+
 export function useAuthentication() {
   const validate = useCallback(async () => {
     try {
-      const response = await makeRequest<{ isValidated: boolean }>(
-        "get",
-        "/validate"
-      );
+      const response = await makeRequest<{
+        isValidated: boolean;
+        csrfToken: string;
+      }>("get", "/validate");
+
+      _csrf = response.csrfToken;
 
       return response.isValidated;
     } catch (error) {
@@ -56,7 +60,10 @@ async function makeRequest<T>(
   route: string,
   body?: Record<string, string>
 ): Promise<T> {
-  const response = await axios[method](route, body);
+  const response = await axios[method](route, {
+    ...body,
+    _csrf,
+  });
   const data = response.data as AuthenticationResponse<T>;
 
   if (!data.error && data.result === "OK") {
