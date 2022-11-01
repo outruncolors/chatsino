@@ -3,6 +3,10 @@ import { ChatsinoLogger } from "logging";
 import { AuthenticatedClient, AuthenticationService } from "services";
 import { ClientSession } from "./socket.controller";
 
+interface RequestWithCSRFToken extends Request {
+  csrfToken(): string;
+}
+
 export class AuthenticationController {
   private logger = new ChatsinoLogger(this.constructor.name);
   private authenticationService = AuthenticationService.instance;
@@ -26,6 +30,7 @@ export class AuthenticationController {
         message: "Validation request succeeded.",
         data: {
           isValidated,
+          csrfToken: (req as RequestWithCSRFToken).csrfToken(),
         },
       });
     } catch (error) {

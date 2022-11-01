@@ -25,6 +25,7 @@ export const POSTGRES_CONNECTION_STRING =
 export const JWT_SECRET = process.env.JWT_SECRET ?? "";
 export const SESSION_SECRET = process.env.SESSION_SECRET ?? "";
 export const COOKIE_SECRET = process.env.COOKIE_SECRET ?? "";
+export const CSRF_SECRET = process.env.CSRF_SECRET ?? "";
 
 // Hashing & Salting
 export const SALT_SIZE = 128;

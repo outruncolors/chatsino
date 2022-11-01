@@ -2,6 +2,7 @@ import express from "express";
 import bodyParser from "body-parser";
 import cookieParser from "cookie-parser";
 import createSessionParser from "express-session";
+import csrf from "tiny-csrf";
 import { createServer } from "https";
 import { readFileSync } from "fs";
 import { WebSocketServer } from "ws";
@@ -30,8 +31,21 @@ import * as config from "config";
     resave: false,
   });
 
+  // Cross-Site Request Forgery protection.
+  const csrfProtection = csrf(
+    config.CSRF_SECRET,
+    ["POST"], // Methods to protect.
+    [], // URLs to exclude.
+    [] // Requests that skip the middleware.
+  );
+
   // -- Middleware
-  app.use(sessionParser, bodyParser.json(), cookieParser(config.COOKIE_SECRET));
+  app.use(
+    sessionParser,
+    bodyParser.json(),
+    cookieParser(config.COOKIE_SECRET),
+    csrfProtection
+  );
 
   // -- Routes
   // ---- Authentication
