@@ -1,39 +1,35 @@
-import { useEffect, useRef } from "react";
-import { useAuthentication, useSocket } from "./hooks";
+import { useEffect, useRef, useState } from "react";
+import { Signin } from "components";
+import { useAuthentication } from "hooks";
 
 export function App() {
-  const { signin } = useAuthentication();
-  const { initialize } = useSocket();
-  const signedIn = useRef(false);
+  const { validate } = useAuthentication();
+  const initiallyValidated = useRef(false);
+  const [validating, setValidating] = useState(true);
+  const [signedIn, setSignedIn] = useState(false);
+  const [signingUp, setSigningUp] = useState(false);
 
   useEffect(() => {
-    if (!signedIn.current) {
-      signedIn.current = true;
+    if (!initiallyValidated.current) {
+      initiallyValidated.current = true;
 
-      const handleSignin = async () => {
-        await signin("user6", "password");
-        initialize();
-      };
-
-      handleSignin();
+      validate()
+        .then(setSignedIn)
+        .then(() => setValidating(false));
     }
-  }, [signin, initialize]);
+  }, [validate]);
 
-  return (
-    <div className="App">
-      <header className="App-header">
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+  if (validating) {
+    return <p>Validating...</p>;
+  }
+
+  if (signedIn) {
+    return <p>Signed in.</p>;
+  }
+
+  if (signingUp) {
+    return <p>Sign up.</p>;
+  }
+
+  return <Signin onSignin={() => setSignedIn(true)} />;
 }

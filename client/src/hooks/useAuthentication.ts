@@ -1,32 +1,68 @@
 import { useCallback, useMemo } from "react";
 import { axios } from "helpers";
 
-interface AuthenticationResponse {
-  error: boolean;
-  result: "OK" | "Error";
-  message: string;
-}
-
 export function useAuthentication() {
-  const signin = useCallback(async (username: string, password: string) => {
+  const validate = useCallback(async () => {
     try {
-      const response = await axios.post("/signin", { username, password });
-      const data = response.data as AuthenticationResponse;
+      const response = await makeRequest<{ isValidated: boolean }>(
+        "get",
+        "/validate"
+      );
 
-      if (!data.error && data.result === "OK") {
-        console.info({ message: data.message }, "Successfully signed in.");
-      } else {
-        throw new Error(data.message);
-      }
+      return response.isValidated;
     } catch (error) {
-      console.error({ error }, "Unable to sign in.");
+      console.error({ error }, "Unable to validate.");
+      throw error;
     }
   }, []);
 
+  const signin = useCallback(async (username: string, password: string) => {
+    try {
+      await makeRequest<void>("post", "/signin", {
+        username,
+        password,
+      });
+    } catch (error) {
+      console.error({ error }, "Unable to sign in.");
+      throw error;
+    }
+  }, []);
+
+  const signout = useCallback(() => {}, []);
+
+  const signup = useCallback(() => {}, []);
+
   return useMemo(
     () => ({
+      validate,
       signin,
+      signout,
+      signup,
     }),
-    [signin]
+    [validate, signin, signout, signup]
   );
 }
+
+// #region Helpers
+interface AuthenticationResponse<T> {
+  error: boolean;
+  result: "OK" | "Error";
+  message: string;
+  data: T;
+}
+
+async function makeRequest<T>(
+  method: "get" | "post",
+  route: string,
+  body?: Record<string, string>
+): Promise<T> {
+  const response = await axios[method](route, body);
+  const data = response.data as AuthenticationResponse<T>;
+
+  if (!data.error && data.result === "OK") {
+    return data.data;
+  } else {
+    throw new Error(data.message);
+  }
+}
+// #endregion
