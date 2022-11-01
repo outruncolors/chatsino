@@ -165,7 +165,7 @@ export class AuthenticationService {
     return `${username}/Access`;
   }
 
-  private createClientAccessToken(username: string) {
+  public createClientAccessToken(username: string) {
     return this.cacheService.createToken(
       this.formatClientAccessLabel(username),
       {
@@ -176,7 +176,7 @@ export class AuthenticationService {
     );
   }
 
-  private destroyClientAccessToken(username: string) {
+  public destroyClientAccessToken(username: string) {
     return this.cacheService.destroyToken(
       this.formatClientAccessLabel(username)
     );
@@ -187,7 +187,7 @@ export class AuthenticationService {
     return `${username}/Refresh`;
   }
 
-  private createClientRefreshToken(username: string) {
+  public createClientRefreshToken(username: string) {
     return this.cacheService.createToken(
       this.formatClientRefreshLabel(username),
       {
@@ -198,7 +198,7 @@ export class AuthenticationService {
     );
   }
 
-  private destroyClientRefreshToken(username: string) {
+  public destroyClientRefreshToken(username: string) {
     return this.cacheService.destroyToken(
       this.formatClientRefreshLabel(username)
     );

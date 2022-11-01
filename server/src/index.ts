@@ -1,6 +1,7 @@
 import express from "express";
 import bodyParser from "body-parser";
-import session from "express-session";
+import cookieParser from "cookie-parser";
+import createSessionParser from "express-session";
 import { createServer } from "https";
 import { readFileSync } from "fs";
 import { WebSocketServer } from "ws";
@@ -21,18 +22,21 @@ import * as config from "config";
   logger.info("Initializing application.");
 
   const app = express();
-  const sessionParser = session({
+
+  // The session parser is used by both the HTTPS and WSS servers.
+  const sessionParser = createSessionParser({
     saveUninitialized: false,
     secret: config.SESSION_SECRET,
     resave: false,
   });
 
   // -- Middleware
-  app.use(sessionParser, bodyParser.json());
+  app.use(sessionParser, bodyParser.json(), cookieParser(config.COOKIE_SECRET));
 
   // -- Routes
   // ---- Authentication
   const authenticationController = new AuthenticationController();
+  app.get("/api/validate", authenticationController.handleValidationRequest);
   app.post("/api/signin", authenticationController.handleSigninRequest);
 
   // HTTPS / WebSocket Servers
@@ -40,7 +44,6 @@ import * as config from "config";
 
   const wss = new WebSocketServer({ noServer: true });
   const socketController = new SocketController(wss, sessionParser);
-
   const server = createServer(
     {
       cert: readFileSync(config.SSL_CERTIFICATE_PATH),

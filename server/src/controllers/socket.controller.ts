@@ -4,10 +4,10 @@ import { Duplex } from "stream";
 import { RawData, WebSocket, WebSocketServer } from "ws";
 import { ChatsinoLogger } from "logging";
 import { secondsSince } from "helpers";
-import { AuthenticationService, AuthenticatedClient } from "services";
+import { AuthenticatedClient } from "services";
 import * as config from "config";
 
-interface ClientSession extends Session {
+export interface ClientSession extends Session {
   client: AuthenticatedClient;
 }
 

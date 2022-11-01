@@ -21,20 +21,18 @@ export const SSL_KEY_PATH = path.join(__dirname, "../.ssh/localhost-key.pem");
 export const POSTGRES_CONNECTION_STRING =
   process.env.POSTGRES_CONNECTION_STRING ?? "";
 
+// Seeeeeeekrits
+export const JWT_SECRET = process.env.JWT_SECRET ?? "";
 export const SESSION_SECRET = process.env.SESSION_SECRET ?? "";
+export const COOKIE_SECRET = process.env.COOKIE_SECRET ?? "";
 
 // Hashing & Salting
 export const SALT_SIZE = 128;
-
 export const HASH_SIZE = 60;
-
 export const MINIMUM_PASSWORD_SIZE = 8;
 
 // JSON Web Tokens
-export const JWT_SECRET = process.env.JWT_SECRET;
-
 export const JWT_ACCESS_EXPIRATON_TIME = 60 * 20; // Twenty minutes.
-
 export const JWT_REFRESH_EXPIRATION_TIME = 60 * 60 * 24; // One day.
 
 // Socket Management

@@ -23,6 +23,7 @@ const options = {
     "process.env.POSTGRES_CONNECTION_STRING": `"${process.env.POSTGRES_CONNECTION_STRING}"`,
     "process.env.JWT_SECRET": `"${process.env.JWT_SECRET}"`,
     "process.env.SESSION_SECRET": `"${process.env.SESSION_SECRET}"`,
+    "process.env.COOKIE_SECRET": `"${process.env.COOKIE_SECRET}"`,
   },
   external: [
     "mysql2",
