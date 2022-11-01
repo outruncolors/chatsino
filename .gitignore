@@ -11,6 +11,10 @@
 # production
 /**/build
 
+# shared
+client/**/shared
+server/**/shared
+
 # misc
 /**/.DS_Store
 /**/.env.local
