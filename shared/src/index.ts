@@ -1,1 +1,2 @@
-export * from "./schema-validation";
+export * as sharedConfig from "./config";
+export * from "./schemas";
