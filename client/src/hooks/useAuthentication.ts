@@ -32,7 +32,15 @@ export function useAuthentication() {
     }
   }, []);
 
-  const signout = useCallback(() => {}, []);
+  const signout = useCallback(async () => {
+    try {
+      await makeRequest<void>("post", "/signout");
+      window.location.reload();
+    } catch (error) {
+      console.error({ error }, "Unable to sign out.");
+      throw error;
+    }
+  }, []);
 
   const signup = useCallback(() => {}, []);
 

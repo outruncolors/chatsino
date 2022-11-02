@@ -20,7 +20,7 @@ export class AuthenticationController {
         "Received a request to validate."
       );
 
-      const accessToken = req.signedCookies?.accessToken;
+      const accessToken = req.cookies?.accessToken;
       const isValidated = Boolean(
         accessToken &&
           (await this.authenticationService.validateToken(accessToken))
@@ -35,6 +35,11 @@ export class AuthenticationController {
           csrfToken: (req as RequestWithCSRFToken).csrfToken(),
         },
       });
+
+      this.logger.info(
+        { sessionID: req.sessionID, isValidated },
+        "Validation request complete."
+      );
     } catch (error) {
       this.logger.error(
         { error: (error as Error).message },

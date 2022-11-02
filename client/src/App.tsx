@@ -3,7 +3,7 @@ import { Signin } from "components";
 import { useAuthentication } from "hooks";
 
 export function App() {
-  const { validate } = useAuthentication();
+  const { validate, signout } = useAuthentication();
   const initiallyValidated = useRef(false);
   const [validating, setValidating] = useState(true);
   const [signedIn, setSignedIn] = useState(false);
@@ -24,7 +24,12 @@ export function App() {
   }
 
   if (signedIn) {
-    return <p>Signed in.</p>;
+    return (
+      <p>
+        Signed in.
+        <button type="button" onClick={signout} />
+      </p>
+    );
   }
 
   if (signingUp) {
