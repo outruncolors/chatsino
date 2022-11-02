@@ -13,7 +13,6 @@ import {
 } from "controllers";
 import { ChatsinoLogger } from "logging";
 import * as config from "config";
-import "./shared/schemas";
 
 (async () => {
   // Logging
@@ -53,6 +52,7 @@ import "./shared/schemas";
   const authenticationController = new AuthenticationController();
   app.get("/api/validate", authenticationController.handleValidationRequest);
   app.post("/api/signin", authenticationController.handleSigninRequest);
+  app.post("/api/signout", authenticationController.handleSignoutRequest);
 
   // HTTPS / WebSocket Servers
   logger.info("Initializing HTTPS and WebSocket servers.");

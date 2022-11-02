@@ -20,7 +20,7 @@ export class AuthenticationController {
         "Received a request to validate."
       );
 
-      const accessToken = req.cookies?.accessToken;
+      const accessToken = req.signedCookies?.accessToken;
       const isValidated = Boolean(
         accessToken &&
           (await this.authenticationService.validateToken(accessToken))
@@ -74,8 +74,15 @@ export class AuthenticationController {
         result: "OK",
         message: "Successfully signed in.",
       });
+
+      this.logger.info("Successfully signed a client in.");
     } catch (error) {
       if (error instanceof ValidationError) {
+        this.logger.error(
+          { error: error.message },
+          "Unable to sign a client out. (ValidationError)"
+        );
+
         res.status(400).send({
           error: true,
           result: "Error",
@@ -85,10 +92,51 @@ export class AuthenticationController {
           },
         });
       } else if (error instanceof Error) {
+        this.logger.error(
+          { error: error.message },
+          "Unable to sign a client out. (Error)"
+        );
+
         res.status(400).send({
           error: true,
           result: "Error",
           message: "Failed to sign in.",
+        });
+      }
+    }
+  };
+
+  public handleSignoutRequest = async (req: Request, res: Response) => {
+    try {
+      this.logger.info(
+        { sessionID: req.sessionID },
+        "Received a request to sign out."
+      );
+
+      const session = req.session as ClientSession;
+      const username = session.client.username;
+
+      await this.authenticationService.signout(username);
+      await new Promise((resolve) => req.session.destroy(resolve));
+
+      res.status(200).send({
+        error: false,
+        result: "OK",
+        message: "Successfully signed out.",
+      });
+
+      this.logger.info("Successfully signed a client out.");
+    } catch (error) {
+      if (error instanceof Error) {
+        this.logger.error(
+          { error: error.message },
+          "Unable to sign a client out."
+        );
+
+        res.status(400).send({
+          error: true,
+          result: "Error",
+          message: "Failed to sign out.",
         });
       }
     }
@@ -101,17 +149,19 @@ export class AuthenticationController {
       {
         httpOnly: true,
         sameSite: "strict",
+        secure: true,
       }
     );
 
     res.cookie(
-      "accessToken",
+      "refreshToken",
       await this.authenticationService.createClientRefreshToken(
         client.username
       ),
       {
         httpOnly: true,
         sameSite: "strict",
+        secure: true,
       }
     );
   };
