@@ -13,6 +13,7 @@ import {
 } from "controllers";
 import { ChatsinoLogger } from "logging";
 import * as config from "config";
+import "./shared/schemas";
 
 (async () => {
   // Logging
@@ -35,7 +36,7 @@ import * as config from "config";
   const csrfProtection = csrf(
     config.CSRF_SECRET,
     ["POST"], // Methods to protect.
-    [], // URLs to exclude.
+    ["/api/signin"], // URLs to exclude.
     [] // Requests that skip the middleware.
   );
 

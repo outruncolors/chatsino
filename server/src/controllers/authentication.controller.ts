@@ -2,6 +2,8 @@ import { Request, Response } from "express";
 import { ChatsinoLogger } from "logging";
 import { AuthenticatedClient, AuthenticationService } from "services";
 import { ClientSession } from "./socket.controller";
+import { clientSigninSchema } from "shared";
+import { ValidationError } from "yup";
 
 interface RequestWithCSRFToken extends Request {
   csrfToken(): string;
@@ -54,10 +56,8 @@ export class AuthenticationController {
         "Received a request to sign in."
       );
 
-      const { username, password } = this.validateRequestBody(
-        req,
-        "username",
-        "password"
+      const { username, password } = await clientSigninSchema.validate(
+        req.body
       );
       const client = await this.authenticationService.signin(
         username,
@@ -75,33 +75,23 @@ export class AuthenticationController {
         message: "Successfully signed in.",
       });
     } catch (error) {
-      this.logger.error(
-        { error: (error as Error).message },
-        "Unable to handle a request to sign in."
-      );
-
-      res.status(400).send({
-        error: true,
-        result: "Error",
-        message: "Failed to sign in.",
-      });
-    }
-  };
-
-  private validateRequestBody = (req: Request, ...fields: string[]) => {
-    const values: Record<string, string> = {};
-
-    for (const field of fields) {
-      const fieldValue = req.body[field];
-
-      if (typeof fieldValue === "undefined") {
-        throw new Error(`Missing required field ${field} in request body.`);
+      if (error instanceof ValidationError) {
+        res.status(400).send({
+          error: true,
+          result: "Error",
+          message: {
+            description: "Validation errors detected.",
+            errors: error.errors,
+          },
+        });
+      } else if (error instanceof Error) {
+        res.status(400).send({
+          error: true,
+          result: "Error",
+          message: "Failed to sign in.",
+        });
       }
-
-      values[field] = fieldValue;
     }
-
-    return values;
   };
 
   private grantTokens = async (res: Response, client: AuthenticatedClient) => {

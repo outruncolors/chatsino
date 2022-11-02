@@ -10,6 +10,9 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "moduleResolution": "node",
-    "baseUrl": "src"
+    "baseUrl": "src",
+    "strictFunctionTypes": false,
+    "strictNullChecks": true,
+    "useUnknownInCatchVariables": true
   }
 }

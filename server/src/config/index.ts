@@ -1,5 +1,8 @@
 import path from "path";
 
+// Re-export all configuration shared between client and server.
+export * from "../shared/config";
+
 // Should debug functionality be enabled?
 export const DEBUG = process.env.NODE_ENV !== "production";
 
@@ -30,7 +33,6 @@ export const CSRF_SECRET = process.env.CSRF_SECRET ?? "";
 // Hashing & Salting
 export const SALT_SIZE = 128;
 export const HASH_SIZE = 60;
-export const MINIMUM_PASSWORD_SIZE = 8;
 
 // JSON Web Tokens
 export const JWT_ACCESS_EXPIRATON_TIME = 60 * 20; // Twenty minutes.

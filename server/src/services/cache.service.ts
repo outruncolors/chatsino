@@ -32,7 +32,7 @@ export class CacheService {
         expiresIn,
       });
 
-      this.logger.info({ token }, "Successfully created a token.");
+      this.logger.info("Successfully created a token.");
 
       return token;
     } catch (error) {
@@ -51,11 +51,11 @@ export class CacheService {
         throw new Error("Cannot verify a token until jwtRedis is initialized.");
       }
 
-      this.logger.info({ token }, "Verifying a token.");
+      this.logger.info("Verifying a token.");
 
       const verified = await this.jwtRedis.verify(token, config.JWT_SECRET);
 
-      this.logger.info({ token }, "Successfully verified a token.");
+      this.logger.info("Successfully verified a token.");
 
       return verified;
     } catch (error) {
