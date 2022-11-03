@@ -4,6 +4,16 @@ import { Client, ClientRepository } from "repositories";
 import { now } from "helpers";
 import * as config from "config";
 import { CacheService } from "./cache.service";
+import { ClientPermissionLevel } from "../repositories";
+
+export type TokenKind = "access" | "refresh";
+
+export type DecodedAuthToken = {
+  username: string;
+  kind: TokenKind;
+  permissionLevel: ClientPermissionLevel;
+  permissions: ClientPermissionLevel[];
+};
 
 export interface AuthenticatedClient extends Omit<Client, "hash" | "salt"> {
   connectedAt: number;
@@ -33,7 +43,12 @@ export class AuthenticationService {
       const salt = randomBytes(config.SALT_SIZE).toString("hex");
       const hash = await this.generateHash(password, salt);
 
-      await this.clientRepository.createClient(username, hash, salt);
+      await this.clientRepository.createClient(
+        username,
+        hash,
+        salt,
+        "admin:unlimited" // TODO: Change me.
+      );
 
       const client = await this.clientRepository.getClientByUsername(username);
 
@@ -87,10 +102,12 @@ export class AuthenticationService {
         throw new Error(`client with username of ${username} was not found.`);
       }
     } catch (error) {
-      this.logger.error(
-        { client: username, error: (error as Error).message },
-        "A client was unable to sign in."
-      );
+      if (error instanceof Error) {
+        this.logger.error(
+          { client: username, error: error.message },
+          "A client was unable to sign in."
+        );
+      }
 
       throw error;
     }
@@ -120,25 +137,45 @@ export class AuthenticationService {
     }
   }
 
-  public async validateToken(token: string) {
+  public async validateToken(token: string): Promise<null | DecodedAuthToken> {
     try {
+      if (!token) {
+        return null;
+      }
+
+      // The token definitely came from us.
       await this.cacheService.verifyToken(token);
-      return true;
-    } catch {
-      return false;
-    }
-  }
 
-  public async refreshToken(token: string) {
-    const refreshTokenIsValid = await this.validateToken(token);
+      // Does the permission level of the token match the specified user?
+      const { username, kind, permissionLevel } =
+        (await this.cacheService.decodeToken(token)) as DecodedAuthToken;
 
-    if (refreshTokenIsValid) {
+      let actualPermissionLevel = permissionLevel;
+
+      if (username && permissionLevel !== "visitor") {
+        const existingUser = await this.clientRepository.getClientByUsername(
+          username
+        );
+        actualPermissionLevel = existingUser?.permissionLevel ?? "visitor";
+      }
+
+      const permissionRanking: ClientPermissionLevel[] = [
+        "visitor",
+        "user",
+        "admin:limited",
+        "admin:unlimited",
+      ];
+      const permissionIndex = permissionRanking.indexOf(permissionLevel);
+      const permissions = permissionRanking.slice(0, permissionIndex + 1);
+
       return {
-        access: await this.createClientAccessToken(""),
-        refresh: await this.createClientRefreshToken(""),
+        username,
+        kind,
+        permissionLevel,
+        permissions,
       };
-    } else {
-      throw new Error("Refresh token is not valid.");
+    } catch {
+      return null;
     }
   }
 
@@ -152,8 +189,7 @@ export class AuthenticationService {
 
   private async createAuthenticatedClient(client: Client) {
     return {
-      id: client.id,
-      username: client.username,
+      ...client,
       connectedAt: now(),
     };
   }
@@ -163,12 +199,13 @@ export class AuthenticationService {
     return `${username}/Access`;
   }
 
-  public createClientAccessToken(username: string) {
+  public createClientAccessToken(client: AuthenticatedClient) {
     return this.cacheService.createToken(
-      this.formatClientAccessLabel(username),
+      this.formatClientAccessLabel(client.username),
       {
-        username,
+        username: client.username,
         kind: "access",
+        permissionLevel: client.permissionLevel,
       },
       config.JWT_ACCESS_EXPIRATON_TIME
     );

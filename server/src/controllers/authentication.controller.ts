@@ -1,34 +1,57 @@
-import { Request, Response } from "express";
+import { NextFunction, Request, Response } from "express";
 import { ChatsinoLogger } from "logging";
-import { AuthenticatedClient, AuthenticationService } from "services";
+import { ClientPermissionLevel } from "repositories";
+import {
+  AuthenticatedClient,
+  AuthenticationService,
+  DecodedAuthToken,
+} from "services";
 import { ClientSession } from "./socket.controller";
 import { clientSigninSchema, clientSignupSchema } from "shared";
 import { ValidationError } from "yup";
+
+interface RequestWithAuth extends Request {
+  auth: null | DecodedAuthToken;
+}
 
 export class AuthenticationController {
   private logger = new ChatsinoLogger(this.constructor.name);
   private authenticationService = new AuthenticationService();
 
-  public handleValidationRequest = async (req: Request, res: Response) => {
+  public validationMiddleware =
+    (permissionLevel: ClientPermissionLevel) =>
+    async (req: Request, res: Response, next: NextFunction) => {
+      this.logger.info("Validating incoming request.");
+
+      const accessToken = req.cookies?.accessToken as string;
+      const validatedRequest = await this.authenticationService.validateToken(
+        accessToken
+      );
+
+      if (
+        validatedRequest &&
+        !validatedRequest.permissions.includes(permissionLevel)
+      ) {
+        return errorResponse(res, "Client permission mismatch.");
+      }
+
+      (req as RequestWithAuth).auth = validatedRequest ?? null;
+
+      return next();
+    };
+
+  public handleValidationRequest = async (
+    req: RequestWithAuth,
+    res: Response
+  ) => {
     try {
       this.logger.info(
         { sessionID: req.sessionID },
         "Received a request to validate."
       );
 
-      const accessToken = req.cookies?.accessToken;
-      const isValidated = Boolean(
-        accessToken &&
-          (await this.authenticationService.validateToken(accessToken))
-      );
-
-      this.logger.info(
-        { sessionID: req.sessionID, isValidated },
-        "Validation request complete."
-      );
-
       return successResponse(res, "Validation request succeeded.", {
-        isValidated,
+        client: req.auth,
       });
     } catch (error) {
       if (error instanceof Error) {
@@ -124,10 +147,15 @@ export class AuthenticationController {
       );
 
       const session = req.session as ClientSession;
-      const username = session.client.username;
+      const username = session.client?.username;
 
-      await this.authenticationService.signout(username);
+      if (username) {
+        await this.authenticationService.signout(username);
+      }
+
       await new Promise((resolve) => req.session.destroy(resolve));
+
+      this.revokeTokens(res);
 
       this.logger.info("Successfully signed a client out.");
 
@@ -159,7 +187,7 @@ export class AuthenticationController {
   private grantTokens = async (res: Response, client: AuthenticatedClient) => {
     res.cookie(
       "accessToken",
-      await this.authenticationService.createClientAccessToken(client.username),
+      await this.authenticationService.createClientAccessToken(client),
       {
         httpOnly: true,
         sameSite: "strict",
@@ -178,6 +206,11 @@ export class AuthenticationController {
         secure: true,
       }
     );
+  };
+
+  private revokeTokens = async (res: Response) => {
+    res.clearCookie("accessToken");
+    res.clearCookie("refreshToken");
   };
 }
 

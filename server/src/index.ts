@@ -30,12 +30,19 @@ import * as config from "config";
     resave: false,
   });
 
+  // -- Controllers
+  const authenticationController = new AuthenticationController();
+
   // -- Middleware
-  app.use(sessionParser, bodyParser.json(), cookieParser(config.COOKIE_SECRET));
+  app.use(
+    sessionParser,
+    bodyParser.json(),
+    cookieParser(config.COOKIE_SECRET),
+    authenticationController.validationMiddleware("visitor")
+  );
 
   // -- Routes
   // ---- Authentication
-  const authenticationController = new AuthenticationController();
   app.get("/api/validate", authenticationController.handleValidationRequest);
   app.post("/api/signup", authenticationController.handleSignupRequest);
   app.post("/api/signin", authenticationController.handleSigninRequest);

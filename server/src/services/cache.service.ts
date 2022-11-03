@@ -2,6 +2,7 @@ import { createClient } from "redis";
 import JWTRedis from "jwt-redis";
 import { ChatsinoLogger } from "logging";
 import * as config from "config";
+import { now } from "helpers";
 
 export class CacheService {
   private logger = new ChatsinoLogger(this.constructor.name);
@@ -13,6 +14,25 @@ export class CacheService {
     this.initializeJwtr();
   }
 
+  // Caching
+  public getValue = async (key: string): Promise<unknown> => {
+    let value = await this.redisClient.get(key);
+
+    if (value) {
+      try {
+        value = JSON.parse(value);
+      } catch {}
+    }
+
+    return value;
+  };
+  public setValue = async (
+    key: string,
+    value: number | string,
+    ttl: number /* seconds */
+  ) => this.redisClient.set(key, value, { EXAT: now() + ttl });
+
+  // Tokens
   public async createToken(
     label: string,
     values: Record<string, unknown> = {},
@@ -57,12 +77,27 @@ export class CacheService {
 
       return verified;
     } catch (error) {
-      this.logger.error(
-        { error: (error as Error).message },
-        "Failed to verify a token."
-      );
+      if (error instanceof Error) {
+        this.logger.error(
+          { error: error.message },
+          "Failed to verify a token."
+        );
 
-      throw error;
+        throw error;
+      }
+    }
+  }
+
+  public async decodeToken(token: string) {
+    try {
+      return this.jwtRedis?.decode(token);
+    } catch (error) {
+      if (error instanceof Error) {
+        this.logger.error(
+          { error: error.message },
+          "Unable to decode a token."
+        );
+      }
     }
   }
 
@@ -84,12 +119,14 @@ export class CacheService {
         this.logger.info("There was no token to destroy.");
       }
     } catch (error) {
-      this.logger.error(
-        { error: (error as Error).message },
-        "Failed to destroy a token."
-      );
+      if (error instanceof Error) {
+        this.logger.error(
+          { error: error.message },
+          "Failed to destroy a token."
+        );
 
-      throw error;
+        throw error;
+      }
     }
   }
 

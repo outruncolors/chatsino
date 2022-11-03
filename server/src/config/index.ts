@@ -40,3 +40,6 @@ export const JWT_REFRESH_EXPIRATION_TIME = 60 * 60 * 24; // One day.
 
 // Socket Management
 export const DEAD_CONNECTION_CHECK_RATE = 1000 * 30; // Thirty seconds.
+
+// Caching
+export const CLIENT_CACHE_TTL = 60 * 3; // Three minutes.
