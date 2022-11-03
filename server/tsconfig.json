@@ -13,6 +13,7 @@
     "baseUrl": "src",
     "strictFunctionTypes": false,
     "strictNullChecks": true,
-    "useUnknownInCatchVariables": true
+    "useUnknownInCatchVariables": true,
+    "allowJs": true
   }
 }

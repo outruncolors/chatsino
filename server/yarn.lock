@@ -1362,11 +1362,6 @@ tildify@2.0.0:
   resolved "https://registry.yarnpkg.com/tildify/-/tildify-2.0.0.tgz#f205f3674d677ce698b7067a99e949ce03b4754a"
   integrity sha512-Cc+OraorugtXNfs50hU9KS369rFXCfgGLpfCfvlc+Ud5u6VWmUQsOAa9HbTvheQdYnrdJqqv1e5oIqXppMYnSw==
 
-tiny-csrf@^1.1.3:
-  version "1.1.3"
-  resolved "https://registry.yarnpkg.com/tiny-csrf/-/tiny-csrf-1.1.3.tgz#cb68ce9299685eb02f2524d85c22fb01d4e91de4"
-  integrity sha512-aQqV/yA93E/7Q/gQ4UHoYmYzrzS5wDEtj2fTXiB1zgT2lEI0CGo+5UK3FtlePn8OECsVlGZWeWBFFnvqudNcwA==
-
 toidentifier@1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/toidentifier/-/toidentifier-1.0.1.tgz#3be34321a88a820ed1bd80dfaa33e479fbb8dd35"

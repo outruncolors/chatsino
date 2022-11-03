@@ -10,11 +10,9 @@ export interface AuthenticatedClient extends Omit<Client, "hash" | "salt"> {
 }
 
 export class AuthenticationService {
-  public static instance = new AuthenticationService();
-
   private logger = new ChatsinoLogger(this.constructor.name);
-  private clientRepository = ClientRepository.instance;
-  private cacheService = CacheService.instance;
+  private clientRepository = new ClientRepository();
+  private cacheService = new CacheService();
 
   public async signup(
     username: string,

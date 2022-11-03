@@ -1,7 +1,6 @@
 import { useCallback, useMemo } from "react";
 import { axios } from "helpers";
-
-let _csrf = "";
+import { ServerResponse } from "shared";
 
 export function useAuthentication() {
   const validate = useCallback(async () => {
@@ -10,8 +9,6 @@ export function useAuthentication() {
         isValidated: boolean;
         csrfToken: string;
       }>("get", "/validate");
-
-      _csrf = response.csrfToken;
 
       return response.isValidated;
     } catch (error) {
@@ -42,7 +39,23 @@ export function useAuthentication() {
     }
   }, []);
 
-  const signup = useCallback(() => {}, []);
+  const signup = useCallback(
+    async (username: string, password: string, passwordAgain: string) => {
+      try {
+        await makeRequest<void>("post", "/signup", {
+          username,
+          password,
+          passwordAgain,
+        });
+
+        window.location.reload();
+      } catch (error) {
+        console.error({ error }, "Unable to sign up.");
+        throw error;
+      }
+    },
+    []
+  );
 
   return useMemo(
     () => ({
@@ -56,23 +69,13 @@ export function useAuthentication() {
 }
 
 // #region Helpers
-interface AuthenticationResponse<T> {
-  error: boolean;
-  result: "OK" | "Error";
-  message: string;
-  data: T;
-}
-
 async function makeRequest<T>(
   method: "get" | "post",
   route: string,
   body?: Record<string, string>
 ): Promise<T> {
-  const response = await axios[method](route, {
-    ...body,
-    _csrf,
-  });
-  const data = response.data as AuthenticationResponse<T>;
+  const response = await axios[method](route, body);
+  const data = response.data as ServerResponse<T>;
 
   if (!data.error && data.result === "OK") {
     return data.data;

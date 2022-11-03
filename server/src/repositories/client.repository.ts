@@ -10,8 +10,6 @@ export interface Client {
 }
 
 export class ClientRepository {
-  public static instance = new ClientRepository();
-
   private logger = new ChatsinoLogger(this.constructor.name);
 
   private database = knex({

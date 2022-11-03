@@ -4,8 +4,6 @@ import { ChatsinoLogger } from "logging";
 import * as config from "config";
 
 export class CacheService {
-  public static instance = new CacheService();
-
   private logger = new ChatsinoLogger(this.constructor.name);
   private redisClient = createClient();
   private jwtRedis: null | JWTRedis = null;

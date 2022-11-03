@@ -5,10 +5,8 @@ const USERNAME = "user7";
 const PASSWORD = "password";
 
 export class TestService {
-  public static instance = new TestService();
-
   private logger = new ChatsinoLogger(this.constructor.name);
-  private authorizationService = AuthenticationService.instance;
+  private authorizationService = new AuthenticationService();
 
   public async createFirstUser() {
     try {

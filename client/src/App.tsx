@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Signin } from "components";
+import { Signin, Signup } from "components";
 import { useAuthentication } from "hooks";
 
 export function App() {
@@ -7,7 +7,6 @@ export function App() {
   const initiallyValidated = useRef(false);
   const [validating, setValidating] = useState(true);
   const [signedIn, setSignedIn] = useState(false);
-  const [signingUp, setSigningUp] = useState(false);
 
   useEffect(() => {
     if (!initiallyValidated.current) {
@@ -26,15 +25,19 @@ export function App() {
   if (signedIn) {
     return (
       <p>
-        Signed in.
-        <button type="button" onClick={signout} />
+        Signed in. <br />
+        <button type="button" onClick={signout}>
+          Sign out
+        </button>
       </p>
     );
   }
 
-  if (signingUp) {
-    return <p>Sign up.</p>;
-  }
-
-  return <Signin onSignin={() => setSignedIn(true)} />;
+  return (
+    <section>
+      <Signin onSignin={() => setSignedIn(true)} />
+      <hr />
+      <Signup onSignup={() => setSignedIn(true)} />
+    </section>
+  );
 }
