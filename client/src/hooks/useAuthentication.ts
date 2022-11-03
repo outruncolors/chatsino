@@ -6,11 +6,15 @@ export function useAuthentication() {
   const validate = useCallback(async () => {
     try {
       const response = await makeRequest<{
-        isValidated: boolean;
-        csrfToken: string;
+        client: {
+          username: string;
+          kind: string;
+          permissionLevel: string;
+          permissions: string[];
+        }; // TODO: Shared type of AuthenticatedClient
       }>("get", "/validate");
 
-      return response.isValidated;
+      return response.client;
     } catch (error) {
       console.error({ error }, "Unable to validate.");
       throw error;

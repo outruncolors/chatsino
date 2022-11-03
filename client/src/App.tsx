@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { Signin, Signup } from "components";
+import { Chatsino, Signin, Signup } from "components";
 import { useAuthentication } from "hooks";
 
 type AppScreen = "signin" | "signup" | "chatsino" | "error";
 
 export function App() {
-  const { validate, signout } = useAuthentication();
+  const { validate } = useAuthentication();
   const initiallyValidated = useRef(false);
   const [validating, setValidating] = useState(true);
   const [validationError, setValidationError] = useState(false);
@@ -17,7 +17,7 @@ export function App() {
       initiallyValidated.current = true;
 
       validate()
-        .then(setSignedIn)
+        .then((client) => setSignedIn(Boolean(client)))
         .then(() => setValidating(false))
         .catch(() => setValidationError(true));
     }
@@ -61,14 +61,7 @@ export function App() {
               )}
             </>
           )}
-          {screen === "chatsino" && (
-            <p>
-              Chatsino <br />
-              <button type="button" onClick={signout}>
-                Sign out
-              </button>
-            </p>
-          )}
+          {screen === "chatsino" && <Chatsino />}
           {screen === "error" && <span>Error</span>}
         </>
       )}
