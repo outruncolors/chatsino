@@ -5,10 +5,6 @@ import { ClientSession } from "./socket.controller";
 import { clientSigninSchema, clientSignupSchema } from "shared";
 import { ValidationError } from "yup";
 
-interface RequestWithCSRFToken extends Request {
-  csrfToken(): string;
-}
-
 export class AuthenticationController {
   private logger = new ChatsinoLogger(this.constructor.name);
   private authenticationService = new AuthenticationService();
@@ -26,31 +22,23 @@ export class AuthenticationController {
           (await this.authenticationService.validateToken(accessToken))
       );
 
-      res.status(200).send({
-        error: false,
-        result: "OK",
-        message: "Validation request succeeded.",
-        data: {
-          isValidated,
-          csrfToken: (req as RequestWithCSRFToken).csrfToken(),
-        },
-      });
-
       this.logger.info(
         { sessionID: req.sessionID, isValidated },
         "Validation request complete."
       );
-    } catch (error) {
-      this.logger.error(
-        { error: (error as Error).message },
-        "Unable to handle a request to validate."
-      );
 
-      res.status(400).send({
-        error: true,
-        result: "Error",
-        message: "Failed to validate.",
+      return successResponse(res, "Validation request succeeded.", {
+        isValidated,
       });
+    } catch (error) {
+      if (error instanceof Error) {
+        this.logger.error(
+          { error: error.message },
+          "Unable to handle a request to validate."
+        );
+
+        return errorResponse(res, "Failed to validate.");
+      }
     }
   };
 
@@ -64,7 +52,6 @@ export class AuthenticationController {
       const { username, password } = await clientSignupSchema.validate(
         req.body
       );
-
       const client = await this.authenticationService.signup(
         username,
         password
@@ -72,13 +59,9 @@ export class AuthenticationController {
 
       await this.attachSession(req, res, client);
 
-      res.status(200).send({
-        error: false,
-        result: "OK",
-        message: "Successfully signed up.",
-      });
-
       this.logger.info("Successfully signed a client up.");
+
+      return successResponse(res, "Successfully signed up.");
     } catch (error) {
       if (error instanceof Error) {
         this.logger.error(
@@ -86,11 +69,7 @@ export class AuthenticationController {
           "Unable to sign a client up."
         );
 
-        res.status(400).send({
-          error: true,
-          result: "Error",
-          message: "Failed to sign up.",
-        });
+        return errorResponse(res, "Failed to sign up.");
       }
     }
   };
@@ -112,13 +91,9 @@ export class AuthenticationController {
 
       await this.attachSession(req, res, client);
 
-      res.status(200).send({
-        error: false,
-        result: "OK",
-        message: "Successfully signed in.",
-      });
-
       this.logger.info("Successfully signed a client in.");
+
+      return successResponse(res, "Successfully signed up.");
     } catch (error) {
       if (error instanceof ValidationError) {
         this.logger.error(
@@ -126,25 +101,17 @@ export class AuthenticationController {
           "Unable to sign a client out. (ValidationError)"
         );
 
-        res.status(400).send({
-          error: true,
-          result: "Error",
-          message: {
-            description: "Validation errors detected.",
-            errors: error.errors,
-          },
-        });
+        return errorResponse(
+          res,
+          `Validation errors detected:\n${error.errors.join("\n")}`
+        );
       } else if (error instanceof Error) {
         this.logger.error(
           { error: error.message },
           "Unable to sign a client out. (Error)"
         );
 
-        res.status(400).send({
-          error: true,
-          result: "Error",
-          message: "Failed to sign in.",
-        });
+        return errorResponse(res, "Failed to sign in.");
       }
     }
   };
@@ -162,13 +129,9 @@ export class AuthenticationController {
       await this.authenticationService.signout(username);
       await new Promise((resolve) => req.session.destroy(resolve));
 
-      res.status(200).send({
-        error: false,
-        result: "OK",
-        message: "Successfully signed out.",
-      });
-
       this.logger.info("Successfully signed a client out.");
+
+      return successResponse(res, "Successfully signed out.");
     } catch (error) {
       if (error instanceof Error) {
         this.logger.error(
@@ -176,11 +139,7 @@ export class AuthenticationController {
           "Unable to sign a client out."
         );
 
-        res.status(400).send({
-          error: true,
-          result: "Error",
-          message: "Failed to sign out.",
-        });
+        return errorResponse(res, "Failed to sign out.");
       }
     }
   };
@@ -221,3 +180,22 @@ export class AuthenticationController {
     );
   };
 }
+
+const successResponse = (
+  res: Response,
+  message: string,
+  data?: Record<string, unknown>
+) =>
+  res.status(200).send({
+    error: false,
+    result: "OK",
+    message,
+    data,
+  });
+
+const errorResponse = (res: Response, message: string) =>
+  res.status(400).send({
+    error: true,
+    result: "Error",
+    message,
+  });
