@@ -51,10 +51,9 @@ export class ClientRepository {
         .first();
 
       if (client) {
-        const { hash: _, salt: __, ...rest } = client;
         this.cacheService.setValue(
           username,
-          JSON.stringify(rest),
+          JSON.stringify(client),
           config.CLIENT_CACHE_TTL
         );
 

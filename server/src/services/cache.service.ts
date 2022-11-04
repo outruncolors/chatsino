@@ -4,19 +4,26 @@ import { ChatsinoLogger } from "logging";
 import * as config from "config";
 import { now } from "helpers";
 
+let jwtRedis: null | JWTRedis = null;
+let initializingJwtRedis = false;
+
+const redisClient = createClient();
+
 export class CacheService {
   private logger = new ChatsinoLogger(this.constructor.name);
-  private redisClient = createClient();
-  private jwtRedis: null | JWTRedis = null;
 
   constructor() {
-    this.redisClient.on("error", this.handleRedisError);
-    this.initializeJwtr();
+    redisClient.on("error", this.handleRedisError);
+
+    if (!initializingJwtRedis && !jwtRedis) {
+      initializingJwtRedis = true;
+      this.initializeJwtr();
+    }
   }
 
   // Caching
   public getValue = async (key: string): Promise<unknown> => {
-    let value = await this.redisClient.get(key);
+    let value = await redisClient.get(key);
 
     if (value) {
       try {
@@ -27,13 +34,13 @@ export class CacheService {
     return value;
   };
 
-  public setValue = async (
+  public setValue = (
     key: string,
     value: number | string,
     ttl: number /* seconds */
-  ) => this.redisClient.set(key, value, { EXAT: now() + ttl });
+  ) => redisClient.set(key, value, { EXAT: now() + ttl });
 
-  public clearValue = async (key: string) => this.redisClient.del(key);
+  public clearValue = async (key: string) => redisClient.del(key);
 
   // Tokens
   public async createToken(
@@ -42,14 +49,14 @@ export class CacheService {
     expiresIn: number
   ) {
     try {
-      if (!this.jwtRedis) {
+      if (!jwtRedis) {
         throw new Error("Cannot create a token until jwtRedis is initialized.");
       }
 
       this.logger.info("Creating a token.");
 
       const payload = { jti: label, ...values };
-      const token = await this.jwtRedis.sign(payload, config.JWT_SECRET, {
+      const token = await jwtRedis.sign(payload, config.JWT_SECRET, {
         expiresIn,
       });
 
@@ -68,13 +75,13 @@ export class CacheService {
 
   public async verifyToken(token: string) {
     try {
-      if (!this.jwtRedis) {
+      if (!jwtRedis) {
         throw new Error("Cannot verify a token until jwtRedis is initialized.");
       }
 
       this.logger.info("Verifying a token.");
 
-      const verified = await this.jwtRedis.verify(token, config.JWT_SECRET);
+      const verified = await jwtRedis.verify(token, config.JWT_SECRET);
 
       this.logger.info("Successfully verified a token.");
 
@@ -89,7 +96,7 @@ export class CacheService {
 
   public async decodeToken(token: string) {
     try {
-      return this.jwtRedis?.decode(token);
+      return jwtRedis?.decode(token);
     } catch (error) {
       if (error instanceof Error) {
         this.logger.error(
@@ -102,7 +109,7 @@ export class CacheService {
 
   public async destroyToken(label: string) {
     try {
-      if (!this.jwtRedis) {
+      if (!jwtRedis) {
         throw new Error(
           "Cannot destroy a token until jwtRedis is initialized."
         );
@@ -110,7 +117,7 @@ export class CacheService {
 
       this.logger.info({ label }, "Destroying a token.");
 
-      const destroyed = await this.jwtRedis.destroy(label);
+      const destroyed = await jwtRedis.destroy(label);
 
       if (destroyed) {
         this.logger.info("Successfully destroyed a token.");
@@ -133,9 +140,9 @@ export class CacheService {
     try {
       this.logger.info("Initializing jwt-redis.");
 
-      await this.redisClient.connect();
+      await redisClient.connect();
 
-      this.jwtRedis = new JWTRedis(this.redisClient as any);
+      jwtRedis = new JWTRedis(redisClient as any);
 
       this.logger.info("Successfully initialized jwt-redis.");
     } catch (error) {

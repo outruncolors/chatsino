@@ -85,21 +85,17 @@ export class AuthenticationService {
         const hash = await this.generateHash(password, client.salt);
 
         if (client.hash === hash) {
-          const authenticatedClient = await this.createAuthenticatedClient(
-            client
-          );
-
           this.logger.info(
             { client: username },
             "A client successfully signed in."
           );
 
-          return authenticatedClient;
+          return this.createAuthenticatedClient(client);
         } else {
-          throw new Error(`client provided an invalid password.`);
+          throw new Error("Client provided an invalid password.");
         }
       } else {
-        throw new Error(`client with username of ${username} was not found.`);
+        throw new Error(`Client with username of ${username} was not found.`);
       }
     } catch (error) {
       if (error instanceof Error) {
@@ -187,7 +183,7 @@ export class AuthenticationService {
     );
   }
 
-  private async createAuthenticatedClient(client: Client) {
+  private createAuthenticatedClient(client: Client) {
     return {
       ...client,
       connectedAt: now(),

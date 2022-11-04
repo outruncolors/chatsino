@@ -13,7 +13,7 @@ import { ValidationError } from "yup";
 import { ClientSession } from "./socket.controller";
 import * as config from "config";
 
-interface RequestWithAuth extends Request {
+export interface RequestWithAuth extends Request {
   auth?: null | DecodedAuthToken;
 }
 
@@ -39,6 +39,7 @@ export class AuthenticationController {
       );
 
       if (
+        permissionLevel !== "visitor" &&
         validatedRequest &&
         !validatedRequest.permissions.includes(permissionLevel)
       ) {
@@ -207,15 +208,13 @@ export class AuthenticationController {
           "base64"
         );
 
-        this.logger.info({ ticket }, "Approved a request for a ticket.");
-
         await this.cacheService.setValue(
           formatTicketLabel(client.username),
           ticket,
           config.TICKET_CACHE_TTL
         );
 
-        await this.verifyTicket(req, ticket);
+        this.logger.info({ ticket }, "Approved a request for a ticket.");
 
         return successResponse(res, "Ticket request granted", { ticket });
       } else {
