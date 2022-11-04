@@ -1,10 +1,11 @@
-import { Request, RequestHandler, Response } from "express";
+import querystring from "node:querystring";
+import { Request, RequestHandler } from "express";
 import { Session } from "express-session";
 import { Duplex } from "stream";
 import { RawData, WebSocket, WebSocketServer } from "ws";
 import { ChatsinoLogger } from "logging";
-import { secondsSince } from "helpers";
-import { AuthenticatedClient } from "services";
+import { AuthenticatedClient, DecodedAuthToken, TicketService } from "services";
+import { AuthenticationController } from "./authentication.controller";
 import * as config from "config";
 
 export interface ClientSession extends Session {
@@ -13,7 +14,9 @@ export interface ClientSession extends Session {
 
 export class SocketController {
   private logger = new ChatsinoLogger(this.constructor.name);
-  private socketToClientMap = new Map<WebSocket, AuthenticatedClient>();
+  private authenticationController = new AuthenticationController();
+  private ticketService = new TicketService();
+  private socketToClientMap = new Map<WebSocket, DecodedAuthToken>();
   private socketToAliveMap = new Map<WebSocket, boolean>();
   private wss: WebSocketServer;
   private sessionParser: RequestHandler;
@@ -35,33 +38,60 @@ export class SocketController {
     request: Request,
     socket: Duplex,
     head: Buffer
-  ) =>
-    this.sessionParser(request, {} as unknown as Response, async () => {
-      this.logger.info("Attempting to authenticate a client.");
+  ) => {
+    this.logger.info("A client is attempting to connect.");
+    const { "/?ticket": ticketQueryParam } = querystring.parse(request.url);
+    const ticket = ticketQueryParam as string;
+    const deny = () => {
+      socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
+      socket.destroy();
+    };
 
-      const { client } = request.session as ClientSession;
+    if (!ticket) {
+      this.logger.error("Missing ticket.");
+      return deny();
+    }
 
-      if (client) {
-        const ws = await new Promise<WebSocket>((resolve) =>
-          this.wss.handleUpgrade(request, socket, head, resolve)
-        );
+    const client = await this.authenticationController.validateRequestToken(
+      request,
+      "user"
+    );
 
-        this.socketToClientMap.set(ws, client);
-        this.socketToAliveMap.set(ws, true);
+    if (!client) {
+      this.logger.error("Missing token.");
+      return deny();
+    }
 
-        this.logger.info(
-          { client: this.socketToClientMap.get(ws) },
-          "Client successfully authenticated."
-        );
+    if (!request.socket.remoteAddress) {
+      this.logger.error("Missing remote address.");
+      return deny();
+    }
 
-        this.wss.emit("connection", ws, request);
-      } else {
-        this.logger.error("Failed to authenticate client.");
+    const validatedTicket = await this.ticketService.validateTicket(
+      ticket,
+      client.username,
+      request.socket.remoteAddress
+    );
 
-        socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
-        socket.destroy();
-      }
-    });
+    if (!validatedTicket) {
+      this.logger.error("Ticket could not be validated.");
+      return deny();
+    }
+
+    const ws = await new Promise<WebSocket>((resolve) =>
+      this.wss.handleUpgrade(request, socket, head, resolve)
+    );
+
+    this.socketToClientMap.set(ws, client);
+    this.socketToAliveMap.set(ws, true);
+
+    this.logger.info(
+      { client: this.socketToClientMap.get(ws) },
+      "Client successfully authenticated."
+    );
+
+    this.wss.emit("connection", ws, request);
+  };
 
   private handleServerClose = () => {
     this.logger.info("SocketController is shutting down.");
@@ -92,6 +122,8 @@ export class SocketController {
         },
         "Client successfully connected."
       );
+
+      ws.send("hi");
     } catch (error) {
       this.logger.error(
         { error: (error as Error).message },
@@ -200,17 +232,10 @@ export class SocketController {
     this.logger.info(
       {
         client: this.socketToClientMap.get(ws),
-        "connection duration": `${this.getClientConnectionDuration(ws)}s`,
         "clients connected": this.socketToClientMap.size,
       },
       "Client disconnected."
     );
-  };
-
-  private getClientConnectionDuration = (ws: WebSocket) => {
-    const client = this.socketToClientMap.get(ws);
-
-    return client ? secondsSince(client.connectedAt) : "<unknown>";
   };
 
   private verifyClient = async (ws: WebSocket) => {

@@ -1,10 +1,9 @@
 import { scrypt, randomBytes } from "crypto";
 import { ChatsinoLogger } from "logging";
-import { Client, ClientRepository } from "repositories";
+import { Client, ClientRepository, ClientPermissionLevel } from "repositories";
 import { now } from "helpers";
 import * as config from "config";
 import { CacheService } from "./cache.service";
-import { ClientPermissionLevel } from "../repositories";
 
 export type TokenKind = "access" | "refresh";
 
@@ -146,13 +145,8 @@ export class AuthenticationService {
       const { username, kind, permissionLevel } =
         (await this.cacheService.decodeToken(token)) as DecodedAuthToken;
 
-      let actualPermissionLevel = permissionLevel;
-
-      if (username && permissionLevel !== "visitor") {
-        const existingUser = await this.clientRepository.getClientByUsername(
-          username
-        );
-        actualPermissionLevel = existingUser?.permissionLevel ?? "visitor";
+      if (!username || !kind || !permissionLevel) {
+        return null;
       }
 
       const permissionRanking: ClientPermissionLevel[] = [
@@ -161,8 +155,23 @@ export class AuthenticationService {
         "admin:limited",
         "admin:unlimited",
       ];
-      const permissionIndex = permissionRanking.indexOf(permissionLevel);
+
+      const existingUser = await this.clientRepository.getClientByUsername(
+        username
+      );
+
+      if (!existingUser) {
+        return null;
+      }
+
+      const permissionIndex = permissionRanking.indexOf(
+        existingUser.permissionLevel
+      );
       const permissions = permissionRanking.slice(0, permissionIndex + 1);
+
+      if (!permissions.includes(permissionLevel)) {
+        return null;
+      }
 
       return {
         username,

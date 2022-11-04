@@ -1,32 +1,24 @@
 import { NextFunction, Request, Response } from "express";
 import { ChatsinoLogger } from "logging";
-import { decrypt, encrypt, now } from "helpers";
 import { ClientPermissionLevel } from "repositories";
 import {
   AuthenticatedClient,
   AuthenticationService,
-  CacheService,
   DecodedAuthToken,
+  TicketService,
 } from "services";
 import { clientSigninSchema, clientSignupSchema } from "shared";
 import { ValidationError } from "yup";
 import { ClientSession } from "./socket.controller";
-import * as config from "config";
 
 export interface RequestWithAuth extends Request {
   auth?: null | DecodedAuthToken;
 }
 
-interface DecodedTicket {
-  issuedAt: number;
-  issuedTo: string;
-  username: string;
-}
-
 export class AuthenticationController {
   private logger = new ChatsinoLogger(this.constructor.name);
   private authenticationService = new AuthenticationService();
-  private cacheService = new CacheService();
+  private ticketService = new TicketService();
 
   public validationMiddleware =
     (permissionLevel: ClientPermissionLevel) =>
@@ -50,6 +42,30 @@ export class AuthenticationController {
 
       return next();
     };
+
+  public validateRequestToken = async (
+    req: Request,
+    permissionLevel: ClientPermissionLevel
+  ) => {
+    const accessToken = req.cookies?.accessToken as string;
+    const validatedRequest = await this.authenticationService.validateToken(
+      accessToken
+    );
+
+    if (!validatedRequest) {
+      throw new Error("Missing validated token");
+    }
+
+    if (
+      permissionLevel !== "visitor" &&
+      validatedRequest &&
+      !validatedRequest.permissions.includes(permissionLevel)
+    ) {
+      throw new Error("Client permission mismatch.");
+    }
+
+    return validatedRequest;
+  };
 
   public handleValidationRequest = async (
     req: RequestWithAuth,
@@ -192,31 +208,21 @@ export class AuthenticationController {
       );
 
       const client = req.auth;
-
       if (client) {
         if (!req.socket.remoteAddress) {
           throw new Error("Missing remote address");
         }
 
-        const ticketData: DecodedTicket = {
-          issuedAt: now(),
-          issuedTo: req.socket.remoteAddress,
-          username: client.username,
-        };
-        const { encryptedData, iv } = encrypt(JSON.stringify(ticketData));
-        const ticket = Buffer.from([encryptedData, iv].join("&")).toString(
-          "base64"
+        const ticket = await this.ticketService.grantTicket(
+          client.username,
+          req.socket.remoteAddress
         );
 
-        await this.cacheService.setValue(
-          formatTicketLabel(client.username),
+        this.logger.info("Approved a request for a ticket.");
+
+        return successResponse(res, "Ticket request granted", {
           ticket,
-          config.TICKET_CACHE_TTL
-        );
-
-        this.logger.info({ ticket }, "Approved a request for a ticket.");
-
-        return successResponse(res, "Ticket request granted", { ticket });
+        });
       } else {
         throw new Error("Unauthenticated ticket request");
       }
@@ -235,47 +241,23 @@ export class AuthenticationController {
 
       const client = req.auth;
 
-      if (client) {
-        const label = formatTicketLabel(client.username);
-        const inCacheValue = await this.cacheService.getValue(label);
-
-        // 1. The ticket should exist in the cache.
-        if (!inCacheValue) {
-          throw new Error("Provided ticket does not exist in cache.");
-        }
-
-        // 1. The ticket provided should match the one in the cache.
-        if (inCacheValue !== ticket) {
-          throw new Error("Provided ticket does not match ticket in cache.");
-        }
-
-        // Decode the ticket to process information.
-        const value = Buffer.from(inCacheValue, "base64").toString("utf-8");
-        const [encryptedData, iv] = value.split("&");
-        const decrypted = JSON.parse(
-          decrypt({ iv, encryptedData })
-        ) as DecodedTicket;
-
-        // 2. The decrypted ticket should be assigned to the requesting user.
-        if (decrypted.username !== client.username) {
-          throw new Error("Provided ticket not assigned to requesting user.");
-        }
-
-        // 3. The decrypted ticket should be from the same location.
-        if (decrypted.issuedTo !== req.socket.remoteAddress) {
-          throw new Error(
-            "Provided ticket was not assigned to the same location."
-          );
-        }
-
-        await this.cacheService.clearValue(label);
-
-        this.logger.info("Verified a ticket.");
-
-        return true;
-      } else {
+      if (!client) {
         throw new Error("Unauthenticated ticket verification request.");
       }
+
+      if (!req.socket.remoteAddress) {
+        throw new Error("Request missing remote address");
+      }
+
+      const verified = await this.ticketService.validateTicket(
+        ticket,
+        client.username,
+        req.socket.remoteAddress
+      );
+
+      this.logger.info({ verified }, "Verified a ticket.");
+
+      return verified;
     } catch (error) {
       this.logger.info({ error }, "Ticket verification failed.");
 
@@ -289,9 +271,7 @@ export class AuthenticationController {
     client: AuthenticatedClient
   ) => {
     const session = req.session as ClientSession;
-
     session.client = client;
-
     return this.grantTokens(res, client);
   };
 
