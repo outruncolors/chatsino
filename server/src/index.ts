@@ -44,6 +44,7 @@ import * as config from "config";
   // -- Routes
   // ---- Authentication
   app.get("/api/validate", authenticationController.handleValidationRequest);
+  app.get("/api/ticket", authenticationController.handleTicketRequest);
   app.post("/api/signup", authenticationController.handleSignupRequest);
   app.post("/api/signin", authenticationController.handleSigninRequest);
   app.post("/api/signout", authenticationController.handleSignoutRequest);

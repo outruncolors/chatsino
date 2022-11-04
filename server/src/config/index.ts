@@ -28,7 +28,7 @@ export const POSTGRES_CONNECTION_STRING =
 export const JWT_SECRET = process.env.JWT_SECRET ?? "";
 export const SESSION_SECRET = process.env.SESSION_SECRET ?? "";
 export const COOKIE_SECRET = process.env.COOKIE_SECRET ?? "";
-export const CSRF_SECRET = process.env.CSRF_SECRET ?? "";
+export const TICKET_SECRET = process.env.TICKET_SECRET ?? "";
 
 // Hashing & Salting
 export const SALT_SIZE = 128;
@@ -43,3 +43,4 @@ export const DEAD_CONNECTION_CHECK_RATE = 1000 * 30; // Thirty seconds.
 
 // Caching
 export const CLIENT_CACHE_TTL = 60 * 3; // Three minutes.
+export const TICKET_CACHE_TTL = 10; // Ten seconds.

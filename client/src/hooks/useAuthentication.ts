@@ -61,14 +61,29 @@ export function useAuthentication() {
     []
   );
 
+  const requestTicket = useCallback(async () => {
+    try {
+      const { ticket } = await makeRequest<{ ticket: string }>(
+        "get",
+        "/ticket"
+      );
+
+      return ticket;
+    } catch (error) {
+      console.error({ error }, "Unable to retrieve a ticket.");
+      throw error;
+    }
+  }, []);
+
   return useMemo(
     () => ({
       validate,
       signin,
       signout,
       signup,
+      requestTicket,
     }),
-    [validate, signin, signout, signup]
+    [validate, signin, signout, signup, requestTicket]
   );
 }
 

@@ -24,7 +24,7 @@ const options = {
     "process.env.JWT_SECRET": `"${process.env.JWT_SECRET}"`,
     "process.env.SESSION_SECRET": `"${process.env.SESSION_SECRET}"`,
     "process.env.COOKIE_SECRET": `"${process.env.COOKIE_SECRET}"`,
-    "process.env.CSRF_SECRET": `"${process.env.CSRF_SECRET}"`,
+    "process.env.TICKET_SECRET": `"${process.env.TICKET_SECRET}"`,
   },
   external: [
     "mysql2",

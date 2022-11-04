@@ -26,11 +26,14 @@ export class CacheService {
 
     return value;
   };
+
   public setValue = async (
     key: string,
     value: number | string,
     ttl: number /* seconds */
   ) => this.redisClient.set(key, value, { EXAT: now() + ttl });
+
+  public clearValue = async (key: string) => this.redisClient.del(key);
 
   // Tokens
   public async createToken(
@@ -78,11 +81,7 @@ export class CacheService {
       return verified;
     } catch (error) {
       if (error instanceof Error) {
-        this.logger.error(
-          { error: error.message },
-          "Failed to verify a token."
-        );
-
+        this.logger.info("A token was invalid.");
         throw error;
       }
     }
