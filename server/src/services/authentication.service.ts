@@ -1,7 +1,7 @@
 import { scrypt, randomBytes } from "crypto";
 import { ChatsinoLogger } from "logging";
-import { Client, ClientRepository, ClientPermissionLevel } from "repositories";
-import { derivePermissions, now } from "helpers";
+import { ClientRepository, ClientPermissionLevel } from "repositories";
+import { derivePermissions } from "helpers";
 import * as config from "config";
 import { CacheService } from "./cache.service";
 

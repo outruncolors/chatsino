@@ -1,14 +1,6 @@
+require("./dotenv.config");
 const { build } = require("esbuild");
-const path = require("path");
 const package = require("./package.json");
-const { config: configureEnvironmentVariables } = require("dotenv");
-
-configureEnvironmentVariables({
-  path:
-    process.env.NODE_ENV === "production"
-      ? path.join(__dirname, "./.env/.production.env")
-      : path.join(__dirname, "./.env/.development.env"),
-});
 
 const options = {
   entryPoints: ["./src"],
