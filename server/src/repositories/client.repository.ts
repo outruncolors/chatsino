@@ -17,18 +17,30 @@ export interface Client {
   salt: string;
 }
 
+export type SafeClient = Omit<Client, "hash" | "salt">;
+
+let initializingClientRepository = false;
+
+const database = knex({
+  client: "pg",
+  connection: config.POSTGRES_CONNECTION_STRING,
+  searchPath: ["knex", "public"],
+});
+
 export class ClientRepository {
   private logger = new ChatsinoLogger(this.constructor.name);
   private cacheService = new CacheService();
 
-  private database = knex({
-    client: "pg",
-    connection: config.POSTGRES_CONNECTION_STRING,
-    searchPath: ["knex", "public"],
-  });
+  public static safetify(client: Client) {
+    const { hash: _, salt: __, ...safeClient } = client;
+    return safeClient;
+  }
 
   public constructor() {
-    this.initialize();
+    if (!initializingClientRepository) {
+      initializingClientRepository = true;
+      this.initialize();
+    }
   }
 
   public async getClientByUsername(username: string) {
@@ -46,7 +58,7 @@ export class ClientRepository {
         "User not in cache; retrieving from database."
       );
 
-      const client = await this.database<Client>("clients")
+      const client = await database<Client>("clients")
         .where("username", username)
         .first();
 
@@ -73,7 +85,7 @@ export class ClientRepository {
     try {
       this.logger.info({ username, permissionLevel }, "Creating a Client.");
 
-      await this.database<Client>("clients").insert({
+      await database<Client>("clients").insert({
         username,
         hash,
         salt,
@@ -93,7 +105,9 @@ export class ClientRepository {
   public async initialize() {
     try {
       this.logger.info("Initializing Client repository.");
+
       await this.createTable();
+
       this.logger.info("Client repository successfully initialized.");
     } catch (error) {
       if (error instanceof Error) {
@@ -108,14 +122,14 @@ export class ClientRepository {
   }
 
   private async createTable() {
-    const hasTable = await this.database.schema.hasTable("clients");
+    const hasTable = await database.schema.hasTable("clients");
 
     if (hasTable) {
       this.logger.info(`Table "clients" already exists.`);
     } else {
       this.logger.info(`Creating table "clients".`);
 
-      await this.database.schema.createTable("clients", (table) => {
+      await database.schema.createTable("clients", (table) => {
         table.increments();
         table.string("username").unique();
         table.enu("permissionLevel", [

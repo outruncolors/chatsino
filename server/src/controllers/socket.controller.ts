@@ -1,34 +1,26 @@
 import querystring from "node:querystring";
-import { Request, RequestHandler } from "express";
-import { Session } from "express-session";
+import { Request } from "express";
 import { Duplex } from "stream";
 import { RawData, WebSocket, WebSocketServer } from "ws";
 import { ChatsinoLogger } from "logging";
-import { AuthenticatedClient, DecodedAuthToken, TicketService } from "services";
-import { AuthenticationController } from "./authentication.controller";
+import { TicketService } from "services";
 import * as config from "config";
-
-export interface ClientSession extends Session {
-  client: AuthenticatedClient;
-}
+import { SafeClient } from "repositories";
 
 export class SocketController {
   private logger = new ChatsinoLogger(this.constructor.name);
-  private authenticationController = new AuthenticationController();
   private ticketService = new TicketService();
-  private socketToClientMap = new Map<WebSocket, DecodedAuthToken>();
+  private socketToClientMap = new Map<WebSocket, SafeClient>();
   private socketToAliveMap = new Map<WebSocket, boolean>();
   private wss: WebSocketServer;
-  private sessionParser: RequestHandler;
   private checkingForDeadConnections: NodeJS.Timeout;
 
-  public constructor(wss: WebSocketServer, sessionParser: RequestHandler) {
+  public constructor(wss: WebSocketServer) {
     wss.on("close", this.handleServerClose);
     wss.on("connection", this.handleConnection);
     wss.on("error", this.handleServerError);
 
     this.wss = wss;
-    this.sessionParser = sessionParser;
     this.checkingForDeadConnections = this.checkForDeadConnections();
   }
 
@@ -40,6 +32,7 @@ export class SocketController {
     head: Buffer
   ) => {
     this.logger.info("A client is attempting to connect.");
+
     const { "/?ticket": ticketQueryParam } = querystring.parse(request.url);
     const ticket = ticketQueryParam as string;
     const deny = () => {
@@ -52,29 +45,20 @@ export class SocketController {
       return deny();
     }
 
-    const client = await this.authenticationController.validateRequestToken(
-      request,
-      "user"
+    const {
+      socket: { remoteAddress },
+    } = request;
+
+    if (!remoteAddress) {
+      return deny();
+    }
+
+    const client = await this.ticketService.validateTicket(
+      ticket,
+      remoteAddress
     );
 
     if (!client) {
-      this.logger.error("Missing token.");
-      return deny();
-    }
-
-    if (!request.socket.remoteAddress) {
-      this.logger.error("Missing remote address.");
-      return deny();
-    }
-
-    const validatedTicket = await this.ticketService.validateTicket(
-      ticket,
-      client.username,
-      request.socket.remoteAddress
-    );
-
-    if (!validatedTicket) {
-      this.logger.error("Ticket could not be validated.");
       return deny();
     }
 
@@ -85,10 +69,7 @@ export class SocketController {
     this.socketToClientMap.set(ws, client);
     this.socketToAliveMap.set(ws, true);
 
-    this.logger.info(
-      { client: this.socketToClientMap.get(ws) },
-      "Client successfully authenticated."
-    );
+    this.logger.info("Client successfully authenticated.");
 
     this.wss.emit("connection", ws, request);
   };
@@ -104,8 +85,6 @@ export class SocketController {
   private handleConnection = async (ws: WebSocket) => {
     try {
       this.logger.info("A client is attempting to connect.");
-
-      await this.verifyClient(ws);
 
       ws.on("message", (data) => this.handleClientMessage(ws, data));
       ws.on("close", () => this.handleClientClose(ws));

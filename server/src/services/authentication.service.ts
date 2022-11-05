@@ -1,22 +1,23 @@
 import { scrypt, randomBytes } from "crypto";
 import { ChatsinoLogger } from "logging";
 import { Client, ClientRepository, ClientPermissionLevel } from "repositories";
-import { now } from "helpers";
+import { derivePermissions, now } from "helpers";
 import * as config from "config";
 import { CacheService } from "./cache.service";
 
 export type TokenKind = "access" | "refresh";
 
-export type DecodedAuthToken = {
+export interface AuthenticatedClient {
+  username: string;
+  permissionLevel: ClientPermissionLevel;
+}
+
+export type ClientTokenData = {
   username: string;
   kind: TokenKind;
   permissionLevel: ClientPermissionLevel;
   permissions: ClientPermissionLevel[];
 };
-
-export interface AuthenticatedClient extends Omit<Client, "hash" | "salt"> {
-  connectedAt: number;
-}
 
 export class AuthenticationService {
   private logger = new ChatsinoLogger(this.constructor.name);
@@ -52,7 +53,10 @@ export class AuthenticationService {
       const client = await this.clientRepository.getClientByUsername(username);
 
       if (client) {
-        return this.createAuthenticatedClient(client);
+        return {
+          username,
+          permissionLevel: client.permissionLevel,
+        };
       } else {
         throw new Error(
           `Could not find new client with username of ${username}.`
@@ -89,7 +93,10 @@ export class AuthenticationService {
             "A client successfully signed in."
           );
 
-          return this.createAuthenticatedClient(client);
+          return {
+            username,
+            permissionLevel: client.permissionLevel,
+          };
         } else {
           throw new Error("Client provided an invalid password.");
         }
@@ -132,7 +139,7 @@ export class AuthenticationService {
     }
   }
 
-  public async validateToken(token: string): Promise<null | DecodedAuthToken> {
+  public async validateToken(token: string): Promise<null | ClientTokenData> {
     try {
       if (!token) {
         return null;
@@ -143,18 +150,11 @@ export class AuthenticationService {
 
       // Does the permission level of the token match the specified user?
       const { username, kind, permissionLevel } =
-        (await this.cacheService.decodeToken(token)) as DecodedAuthToken;
+        (await this.cacheService.decodeToken(token)) as ClientTokenData;
 
       if (!username || !kind || !permissionLevel) {
         return null;
       }
-
-      const permissionRanking: ClientPermissionLevel[] = [
-        "visitor",
-        "user",
-        "admin:limited",
-        "admin:unlimited",
-      ];
 
       const existingUser = await this.clientRepository.getClientByUsername(
         username
@@ -164,10 +164,7 @@ export class AuthenticationService {
         return null;
       }
 
-      const permissionIndex = permissionRanking.indexOf(
-        existingUser.permissionLevel
-      );
-      const permissions = permissionRanking.slice(0, permissionIndex + 1);
+      const permissions = derivePermissions(permissionLevel);
 
       if (!permissions.includes(permissionLevel)) {
         return null;
@@ -190,13 +187,6 @@ export class AuthenticationService {
         err ? reject(err) : resolve(hash.toString("hex"))
       )
     );
-  }
-
-  private createAuthenticatedClient(client: Client) {
-    return {
-      ...client,
-      connectedAt: now(),
-    };
   }
 
   // Access Tokens

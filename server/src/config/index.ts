@@ -26,7 +26,6 @@ export const POSTGRES_CONNECTION_STRING =
 
 // Seeeeeeekrits
 export const JWT_SECRET = process.env.JWT_SECRET ?? "";
-export const SESSION_SECRET = process.env.SESSION_SECRET ?? "";
 export const COOKIE_SECRET = process.env.COOKIE_SECRET ?? "";
 export const TICKET_SECRET = process.env.TICKET_SECRET ?? "";
 

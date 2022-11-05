@@ -1,84 +1,30 @@
-import { NextFunction, Request, Response } from "express";
+import { Request, Response } from "express";
 import { ChatsinoLogger } from "logging";
-import { ClientPermissionLevel } from "repositories";
 import {
   AuthenticatedClient,
   AuthenticationService,
-  DecodedAuthToken,
   TicketService,
 } from "services";
+import { AuthenticatedRequest } from "middleware";
 import { clientSigninSchema, clientSignupSchema } from "shared";
+import { successResponse, errorResponse } from "helpers";
 import { ValidationError } from "yup";
-import { ClientSession } from "./socket.controller";
-
-export interface RequestWithAuth extends Request {
-  auth?: null | DecodedAuthToken;
-}
 
 export class AuthenticationController {
   private logger = new ChatsinoLogger(this.constructor.name);
   private authenticationService = new AuthenticationService();
   private ticketService = new TicketService();
 
-  public validationMiddleware =
-    (permissionLevel: ClientPermissionLevel) =>
-    async (req: Request, res: Response, next: NextFunction) => {
-      this.logger.info("Validating incoming request.");
-
-      const accessToken = req.cookies?.accessToken as string;
-      const validatedRequest = await this.authenticationService.validateToken(
-        accessToken
-      );
-
-      if (
-        permissionLevel !== "visitor" &&
-        validatedRequest &&
-        !validatedRequest.permissions.includes(permissionLevel)
-      ) {
-        return errorResponse(res, "Client permission mismatch.");
-      }
-
-      (req as RequestWithAuth).auth = validatedRequest ?? null;
-
-      return next();
-    };
-
-  public validateRequestToken = async (
-    req: Request,
-    permissionLevel: ClientPermissionLevel
-  ) => {
-    const accessToken = req.cookies?.accessToken as string;
-    const validatedRequest = await this.authenticationService.validateToken(
-      accessToken
-    );
-
-    if (!validatedRequest) {
-      throw new Error("Missing validated token");
-    }
-
-    if (
-      permissionLevel !== "visitor" &&
-      validatedRequest &&
-      !validatedRequest.permissions.includes(permissionLevel)
-    ) {
-      throw new Error("Client permission mismatch.");
-    }
-
-    return validatedRequest;
-  };
-
+  // [/api/validate]
   public handleValidationRequest = async (
-    req: RequestWithAuth,
+    req: AuthenticatedRequest,
     res: Response
   ) => {
     try {
-      this.logger.info(
-        { sessionID: req.sessionID },
-        "Received a request to validate."
-      );
+      this.logger.info("Received a request to validate.");
 
       return successResponse(res, "Validation request succeeded.", {
-        client: req.auth,
+        client: req.client,
       });
     } catch (error) {
       if (error instanceof Error) {
@@ -92,12 +38,10 @@ export class AuthenticationController {
     }
   };
 
+  // [/api/signup]
   public handleSignupRequest = async (req: Request, res: Response) => {
     try {
-      this.logger.info(
-        { sessionID: req.sessionID },
-        "Received a request to sign up."
-      );
+      this.logger.info("Received a request to sign up.");
 
       const { username, password } = await clientSignupSchema.validate(
         req.body
@@ -107,7 +51,7 @@ export class AuthenticationController {
         password
       );
 
-      await this.attachSession(req, res, client);
+      await this.grantTokens(res, client);
 
       this.logger.info("Successfully signed a client up.");
 
@@ -124,12 +68,10 @@ export class AuthenticationController {
     }
   };
 
+  // [/api/signin]
   public handleSigninRequest = async (req: Request, res: Response) => {
     try {
-      this.logger.info(
-        { sessionID: req.sessionID },
-        "Received a request to sign in."
-      );
+      this.logger.info("Received a request to sign in.");
 
       const { username, password } = await clientSigninSchema.validate(
         req.body
@@ -139,7 +81,7 @@ export class AuthenticationController {
         password
       );
 
-      await this.attachSession(req, res, client);
+      await this.grantTokens(res, client);
 
       this.logger.info("Successfully signed a client in.");
 
@@ -166,21 +108,21 @@ export class AuthenticationController {
     }
   };
 
-  public handleSignoutRequest = async (req: Request, res: Response) => {
+  // [/api/signout]
+  public handleSignoutRequest = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ) => {
     try {
-      this.logger.info(
-        { sessionID: req.sessionID },
-        "Received a request to sign out."
-      );
+      this.logger.info("Received a request to sign out.");
 
-      const session = req.session as ClientSession;
-      const username = session.client?.username;
+      const { client } = req;
 
-      if (username) {
-        await this.authenticationService.signout(username);
+      if (!client) {
+        throw new Error("Cannot sign out a client that is not signed in.");
       }
 
-      await new Promise((resolve) => req.session.destroy(resolve));
+      await this.authenticationService.signout(client.username);
 
       this.revokeTokens(res);
 
@@ -200,79 +142,62 @@ export class AuthenticationController {
   };
 
   // https://devcenter.heroku.com/articles/websocket-security#authentication-authorization
-  public handleTicketRequest = async (req: RequestWithAuth, res: Response) => {
+  // [/api/ticket]
+  public handleTicketRequest = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ) => {
+    this.logger.info("Received a request for a ticket.");
+
+    const deny = () => errorResponse(res, "Ticket request denied");
+    const {
+      client,
+      socket: { remoteAddress },
+    } = req;
+
+    if (!client || !remoteAddress) {
+      return deny();
+    }
+
     try {
-      this.logger.info(
-        { sessionID: req.sessionID },
-        "Received a request for a ticket."
+      const ticket = await this.ticketService.grantTicket(
+        client.username,
+        remoteAddress
       );
 
-      const client = req.auth;
-      if (client) {
-        if (!req.socket.remoteAddress) {
-          throw new Error("Missing remote address");
-        }
-
-        const ticket = await this.ticketService.grantTicket(
-          client.username,
-          req.socket.remoteAddress
-        );
-
-        this.logger.info("Approved a request for a ticket.");
-
-        return successResponse(res, "Ticket request granted", {
-          ticket,
-        });
-      } else {
-        throw new Error("Unauthenticated ticket request");
-      }
+      return successResponse(res, "Ticket request granted", {
+        ticket,
+      });
     } catch (error) {
-      if (error instanceof Error) {
-        this.logger.info({ error }, "Denied a request for a ticket.");
-
-        return errorResponse(res, "Ticket request denied");
-      }
+      this.logger.info({ error }, "Denied a request for a ticket.");
+      return deny();
     }
   };
 
-  public verifyTicket = async (req: RequestWithAuth, ticket: string) => {
+  public verifyTicket = async (req: AuthenticatedRequest, ticket: string) => {
+    this.logger.info({ ticket }, "Verifying a ticket.");
+
+    const {
+      client,
+      socket: { remoteAddress },
+    } = req;
+
+    if (!client || !remoteAddress) {
+      return null;
+    }
+
     try {
-      this.logger.info({ ticket }, "Verifying a ticket.");
-
-      const client = req.auth;
-
-      if (!client) {
-        throw new Error("Unauthenticated ticket verification request.");
-      }
-
-      if (!req.socket.remoteAddress) {
-        throw new Error("Request missing remote address");
-      }
-
       const verified = await this.ticketService.validateTicket(
         ticket,
-        client.username,
-        req.socket.remoteAddress
+        remoteAddress
       );
-
-      this.logger.info({ verified }, "Verified a ticket.");
 
       return verified;
     } catch (error) {
       this.logger.info({ error }, "Ticket verification failed.");
 
-      return false;
+      return null;
     }
-  };
-
-  private attachSession = (
-    req: Request,
-    res: Response,
-    client: AuthenticatedClient
-  ) => {
-    const session = req.session as ClientSession;
-    session.client = client;
-    return this.grantTokens(res, client);
   };
 
   private grantTokens = async (res: Response, client: AuthenticatedClient) => {
@@ -282,7 +207,6 @@ export class AuthenticationController {
       {
         httpOnly: true,
         sameSite: "strict",
-        secure: true,
       }
     );
 
@@ -294,7 +218,6 @@ export class AuthenticationController {
       {
         httpOnly: true,
         sameSite: "strict",
-        secure: true,
       }
     );
   };
@@ -304,22 +227,3 @@ export class AuthenticationController {
     res.clearCookie("refreshToken");
   };
 }
-
-const successResponse = (
-  res: Response,
-  message: string,
-  data?: Record<string, unknown>
-) =>
-  res.status(200).send({
-    error: false,
-    result: "OK",
-    message,
-    data,
-  });
-
-const errorResponse = (res: Response, message: string) =>
-  res.status(400).send({
-    error: true,
-    result: "Error",
-    message,
-  });

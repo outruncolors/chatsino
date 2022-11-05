@@ -1,5 +1,6 @@
 import { now, decrypt, encrypt } from "helpers";
 import * as config from "config";
+import { ClientRepository, SafeClient } from "repositories";
 import { CacheService } from "./cache.service";
 
 export interface Ticket {
@@ -21,53 +22,48 @@ export class TicketService {
   public static formatLabel = (username: string) => `${username}/Ticket`;
 
   private cacheService = new CacheService();
+  private clientRepository = new ClientRepository();
 
   public grantTicket = async (username: string, location: string) => {
     const ticket = TicketService.formatTicket(username, location);
     const encryptedTicket = await this.encryptTicket(ticket);
+    const client = await this.clientRepository.getClientByUsername(username);
+
+    if (!client) {
+      throw new Error(`No client found with username ${username}`);
+    }
 
     await this.cacheService.setValue(
-      TicketService.formatLabel(username),
       encryptedTicket,
+      JSON.stringify(ClientRepository.safetify(client)),
       config.TICKET_CACHE_TTL
     );
 
     return encryptedTicket;
   };
 
-  public validateTicket = async (
-    encryptedTicket: string,
-    username: string,
-    location: string
-  ) => {
-    const label = TicketService.formatLabel(username);
-    const inCacheValue = (await this.cacheService.getValue(label)) as string;
+  public validateTicket = async (encryptedTicket: string, location: string) => {
+    const client = (await this.cacheService.getValue(
+      encryptedTicket
+    )) as SafeClient;
 
-    // 1. The ticket should exist in the cache.
-    if (!inCacheValue) {
+    if (!client) {
       throw new Error("Provided ticket does not exist in cache.");
-    }
-
-    // 2. The ticket provided should match the one in the cache.
-    if (inCacheValue !== encryptedTicket) {
-      throw new Error("Provided ticket does not match ticket in cache.");
     }
 
     const ticket = await this.decryptTicket(encryptedTicket);
 
-    // 3. The decrypted ticket should be assigned to the requesting user.
-    if (ticket.username !== username) {
-      throw new Error("Provided ticket not assigned to requesting user.");
+    if (ticket.username !== client.username) {
+      throw new Error("Provided ticket was not assigned to the same user.");
     }
 
-    // 4. The decrypted ticket should be from the same location.
     if (ticket.issuedTo !== location) {
       throw new Error("Provided ticket was not assigned to the same location.");
     }
 
-    await this.cacheService.clearValue(label);
+    await this.cacheService.clearValue(encryptedTicket);
 
-    return ticket;
+    return client;
   };
 
   private encryptTicket = async (ticket: Ticket) => {
