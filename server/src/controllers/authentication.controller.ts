@@ -323,5 +323,3 @@ const errorResponse = (res: Response, message: string) =>
     result: "Error",
     message,
   });
-
-const formatTicketLabel = (username: string) => `${username}/Ticket`;

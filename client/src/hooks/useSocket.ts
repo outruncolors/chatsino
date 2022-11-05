@@ -1,12 +1,18 @@
 import { useCallback, useMemo, useRef } from "react";
 import * as config from "config";
 
-export function useSocket() {
+export function useSocket(ticket: string) {
   const socket = useRef<null | WebSocket>(null);
   const initialized = useRef(false);
   const initialize = useCallback(() => {
     if (!socket.current && !initialized.current) {
-      socket.current = new WebSocket(config.SOCKET_SERVER_ADDRESS);
+      const url = new URL(config.SOCKET_SERVER_ADDRESS);
+
+      url.search = new URLSearchParams({
+        ticket,
+      }).toString();
+
+      socket.current = new WebSocket(url);
 
       socket.current.onopen = function handleSocketOpen(event) {
         console.info("Opened connection.", event);
@@ -28,7 +34,7 @@ export function useSocket() {
 
       initialized.current = true;
     }
-  }, []);
+  }, [ticket]);
 
   return useMemo(
     () => ({
