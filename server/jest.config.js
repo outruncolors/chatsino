@@ -4,4 +4,5 @@ module.exports = {
   testEnvironment: "node",
   moduleDirectories: ["node_modules", "src"],
   setupFilesAfterEnv: ["./dotenv.config.js"],
+  coveragePathIgnorePatterns: ["./src/services/test.service.ts"],
 };

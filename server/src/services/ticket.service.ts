@@ -19,8 +19,6 @@ export class TicketService {
     username,
   });
 
-  public static formatLabel = (username: string) => `${username}/Ticket`;
-
   private cacheService = new CacheService();
   private clientRepository = new ClientRepository();
 
@@ -52,10 +50,6 @@ export class TicketService {
     }
 
     const ticket = await this.decryptTicket(encryptedTicket);
-
-    if (ticket.username !== client.username) {
-      throw new Error("Provided ticket was not assigned to the same user.");
-    }
 
     if (ticket.issuedTo !== location) {
       throw new Error("Provided ticket was not assigned to the same location.");

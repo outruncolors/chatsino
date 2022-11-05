@@ -7,21 +7,21 @@ import {
   clientSettingMiddleware,
 } from "./authentication";
 
-const chance = new Chance();
+const CHANCE = new Chance();
 
 const SAMPLE_AUTHENTICATED_CLIENT = {
-  username: chance.name(),
+  username: CHANCE.name(),
   permissionLevel: "admin:unlimited",
 };
 
-let validateTokenResponse: null | typeof SAMPLE_AUTHENTICATED_CLIENT =
+let VALIDATE_TOKEN_RESPONSE: null | typeof SAMPLE_AUTHENTICATED_CLIENT =
   SAMPLE_AUTHENTICATED_CLIENT;
 
 jest.mock("services", () => ({
   ...jest.requireActual("services"),
   AuthenticationService: class {
     public async validateToken() {
-      return validateTokenResponse;
+      return VALIDATE_TOKEN_RESPONSE;
     }
   },
 }));
@@ -30,7 +30,7 @@ describe("authenticatedRouteMiddleware", () => {
   it("should allow a client to access a resource if their permission level matches the requirement", () => {
     const middleware = authenticatedRouteMiddleware("admin:limited");
     const request = {
-      client: TestGenerator.createClient(),
+      client: TestGenerator.createAuthenticatedClient(),
     } as AuthenticatedRequest;
     const response = null as unknown as Response;
     const next = jest.fn();
@@ -41,7 +41,7 @@ describe("authenticatedRouteMiddleware", () => {
   });
 
   it("should prevent a client from accessing a resource if their permission level does not match the requirement", () => {
-    const client = TestGenerator.createClient();
+    const client = TestGenerator.createAuthenticatedClient();
     client.permissionLevel = "admin:limited";
 
     const middleware = authenticatedRouteMiddleware("admin:unlimited");
@@ -63,12 +63,7 @@ describe("authenticatedRouteMiddleware", () => {
 });
 
 describe("clientSettingMiddleware", () => {
-  beforeEach(() => {
-    jest.resetAllMocks();
-  });
-
   it("should properly set the request client if everything works out", async () => {
-    validateTokenResponse;
     const request = {
       client: null,
       cookies: {
@@ -99,7 +94,7 @@ describe("clientSettingMiddleware", () => {
   });
 
   it("should set a client to null and clear invalid tokens", async () => {
-    validateTokenResponse = null;
+    VALIDATE_TOKEN_RESPONSE = null;
 
     const request = {
       client: undefined,
