@@ -60,6 +60,14 @@ export class BlackjackRepository {
     }
   }
 
+  public create() {
+    return this.initialize();
+  }
+
+  public destroy() {
+    return this.dropTable();
+  }
+
   private async initialize() {
     try {
       this.logger.info("Initializing Blackjack repository.");
@@ -88,19 +96,21 @@ export class BlackjackRepository {
       this.logger.info(`Creating table "blackjack".`);
 
       await database.schema.createTable("blackjack", (table) => {
-        table.increments();
+        table.increments("id", { primaryKey: true });
         table.integer("clientId").references("clients.id").notNullable();
         table.boolean("active").defaultTo(true).notNullable();
-        table
-          .jsonb("state")
-          .defaultTo(new BlackjackGame().serialize())
-          .notNullable();
+        table.jsonb("state");
         table.integer("wager").defaultTo(0).notNullable();
         table.integer("winnings").defaultTo(0).notNullable();
-        table.timestamps();
+        table.timestamps(true);
       });
 
       this.logger.info(`Successfully created table "blackjack".`);
     }
+  }
+
+  private dropTable() {
+    this.logger.info(`Dropping table "blackjack".`);
+    return database.schema.dropTableIfExists("blackjack");
   }
 }

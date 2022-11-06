@@ -150,7 +150,7 @@ export class ClientRepository {
 
   private async initialize() {
     try {
-      this.logger.info("Initializing Client repository.");
+      this.logger.info("Initializing client repository.");
 
       await this.createTable();
 
@@ -159,7 +159,7 @@ export class ClientRepository {
       if (error instanceof Error) {
         this.logger.error(
           { error: error.message },
-          "Failed to initialize Client repository."
+          "Failed to initialize client repository."
         );
 
         throw error;
@@ -176,7 +176,7 @@ export class ClientRepository {
       this.logger.info(`Creating table "clients".`);
 
       await database.schema.createTable("clients", (table) => {
-        table.increments();
+        table.increments("id", { primaryKey: true });
         table.string("username").unique().notNullable();
         table
           .enu("permissionLevel", [
@@ -190,7 +190,7 @@ export class ClientRepository {
         table.specificType("hash", `CHAR(120) DEFAULT NULL`);
         table.specificType("salt", `CHAR(256) DEFAULT NULL`);
         table.integer("chips").defaultTo(0);
-        table.timestamps();
+        table.timestamps(true);
       });
 
       this.logger.info(`Successfully created table "clients".`);

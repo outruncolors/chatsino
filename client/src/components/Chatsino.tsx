@@ -1,42 +1,26 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuthentication, useClient, useSocket } from "hooks";
+import { Admin } from "./Admin";
 
 export function Chatsino() {
   const { client } = useClient();
-  const retrievingTicket = useRef(false);
-  const [ticket, setTicket] = useState("");
-  const [ticketError, setTicketError] = useState("");
-  const { requestTicket, signout } = useAuthentication();
-  const handleEnter = useCallback(async () => {
-    try {
-      if (!retrievingTicket.current) {
-        retrievingTicket.current = true;
-        const retrievedTicket = await requestTicket();
-        setTicket(retrievedTicket);
-      }
-    } catch (error) {
-      console.error("Unable to retrieve ticket");
-
-      setTicketError(
-        "There was an issue authenticating with the socket server."
-      );
-    } finally {
-      retrievingTicket.current = false;
-    }
-  }, [requestTicket]);
-
-  if (ticketError) {
-    return <span>{ticketError}</span>;
-  }
+  const [entered, setEntered] = useState(false);
+  const { signout } = useAuthentication();
+  const isAdmin = useMemo(
+    () =>
+      client &&
+      ["admin:limited", "admin:unlimited"].includes(client.permissionLevel),
+    [client]
+  );
 
   return (
     <div>
       Chatsino <br />
-      {ticket ? (
-        <Lobby ticket={ticket} />
+      {entered ? (
+        <Lobby />
       ) : (
         <>
-          <button type="button" onClick={handleEnter}>
+          <button type="button" onClick={() => setEntered(true)}>
             Enter
           </button>
           <button type="button" onClick={signout}>
@@ -44,17 +28,13 @@ export function Chatsino() {
           </button>
         </>
       )}
-      {JSON.stringify(client)}
+      {isAdmin && <Admin />}
     </div>
   );
 }
 
-interface LobbyProps {
-  ticket: string;
-}
-
-function Lobby({ ticket }: LobbyProps) {
-  const { initialize } = useSocket(ticket);
+function Lobby() {
+  const { initialize } = useSocket();
   const hasInitialized = useRef(false);
 
   useEffect(() => {

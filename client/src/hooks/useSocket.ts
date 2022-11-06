@@ -1,40 +1,59 @@
 import { useCallback, useMemo, useRef } from "react";
 import * as config from "config";
+import { useAuthentication } from "./useAuthentication";
 
-export function useSocket(ticket: string) {
+export function useSocket() {
+  const { requestTicket } = useAuthentication();
   const socket = useRef<null | WebSocket>(null);
-  const initialized = useRef(false);
+  const attemptingToReconnect = useRef<null | NodeJS.Timeout>(null);
   const initialize = useCallback(() => {
-    if (!socket.current && !initialized.current) {
-      const url = new URL(config.SOCKET_SERVER_ADDRESS);
+    const initializeSocket = async () => {
+      try {
+        if (socket.current) {
+          socket.current.close();
+          socket.current = null;
+        }
 
-      url.search = new URLSearchParams({
-        ticket,
-      }).toString();
+        const ticket = await requestTicket();
+        const url = new URL(config.SOCKET_SERVER_ADDRESS);
 
-      socket.current = new WebSocket(url);
+        url.search = new URLSearchParams({
+          ticket,
+        }).toString();
 
-      socket.current.onopen = function handleSocketOpen(event) {
-        console.info("Opened connection.", event);
-      };
+        socket.current = new WebSocket(url);
 
-      socket.current.onclose = function handleSocketClose(event) {
-        console.info("Closed connection.", event);
-        socket.current = null;
-        initialized.current = false;
-      };
+        socket.current.onopen = function handleSocketOpen(event) {
+          console.info("Opened connection.", event);
 
-      socket.current.onerror = function handleSocketError(event) {
-        console.error("Encountered error.", event);
-      };
+          if (attemptingToReconnect.current) {
+            clearInterval(attemptingToReconnect.current);
+          }
+        };
 
-      socket.current.onmessage = function handleSocketMessage(event) {
-        console.info("Received message.", event);
-      };
+        socket.current.onclose = function handleSocketClose(event) {
+          console.info("Closed connection.", event);
 
-      initialized.current = true;
-    }
-  }, [ticket]);
+          attemptingToReconnect.current = setInterval(
+            initialize,
+            config.SOCKET_RECONNECT_ATTEMPT_RATE
+          );
+        };
+
+        socket.current.onerror = function handleSocketError(event) {
+          console.error("Encountered error.", event);
+        };
+
+        socket.current.onmessage = function handleSocketMessage(event) {
+          console.info("Received message.", event);
+        };
+      } catch (error) {
+        console.error("Unable to connect -- retrying soon.", error);
+      }
+    };
+
+    initializeSocket();
+  }, [requestTicket]);
 
   return useMemo(
     () => ({

@@ -1,7 +1,7 @@
 import { ChatsinoLogger } from "logging";
 import { AdminService, AuthenticationService } from "services";
 import { sleep } from "helpers";
-import { ClientRepository } from "repositories";
+import { BlackjackRepository, ClientRepository } from "repositories";
 
 const DEFAULT_PASSWORD = "password";
 const DEFAULT_TOKEN_BALANCE = 9999;
@@ -9,6 +9,7 @@ const DEFAULT_TOKEN_BALANCE = 9999;
 const logger = new ChatsinoLogger("Script/Seed");
 const adminService = new AdminService();
 const authenticationService = new AuthenticationService();
+const blackjackRepository = new BlackjackRepository();
 const clientRepository = new ClientRepository();
 
 export async function seed() {
@@ -16,13 +17,18 @@ export async function seed() {
 
   logger.info("Executing.");
 
+  await destroyRepositories();
   await seedClients();
+}
+
+async function destroyRepositories() {
+  await blackjackRepository.destroy();
+  await clientRepository.destroy();
 }
 
 async function seedClients() {
   logger.info("Seeding clients...");
 
-  await clientRepository.destroy();
   await clientRepository.create();
   const { id } = await authenticationService.signup(
     "admin",
