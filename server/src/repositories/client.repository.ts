@@ -1,7 +1,7 @@
-import knex from "knex";
 import * as config from "config";
 import { ChatsinoLogger } from "logging";
 import { CacheService } from "services";
+import { database } from "./common";
 
 export type ClientPermissionLevel =
   | "visitor"
@@ -15,17 +15,12 @@ export interface Client {
   permissionLevel: ClientPermissionLevel;
   hash: string;
   salt: string;
+  chips: number;
 }
 
 export type SafeClient = Omit<Client, "hash" | "salt">;
 
 let initializingClientRepository = false;
-
-const database = knex({
-  client: "pg",
-  connection: config.POSTGRES_CONNECTION_STRING,
-  searchPath: ["knex", "public"],
-});
 
 export class ClientRepository {
   private logger = new ChatsinoLogger(this.constructor.name);
@@ -41,6 +36,14 @@ export class ClientRepository {
       initializingClientRepository = true;
       this.initialize();
     }
+  }
+
+  public async getClient(clientId: string) {
+    const client = await database<Client>("clients")
+      .where("id", clientId)
+      .first();
+
+    return client ?? null;
   }
 
   public async getClientByUsername(username: string) {
@@ -102,7 +105,37 @@ export class ClientRepository {
     }
   }
 
-  public async initialize() {
+  public async payClient(clientId: string, amount: number) {
+    try {
+      await database<Client>("clients")
+        .where("id", clientId)
+        .increment("chips", amount);
+
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  public async chargeClient(clientId: string, amount: number) {
+    try {
+      const client = await this.getClient(clientId);
+
+      if (!client || client.chips < amount) {
+        return false;
+      }
+
+      await database<Client>("clients")
+        .where("id", clientId)
+        .decrement("chips", amount);
+
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  private async initialize() {
     try {
       this.logger.info("Initializing Client repository.");
 
@@ -131,15 +164,19 @@ export class ClientRepository {
 
       await database.schema.createTable("clients", (table) => {
         table.increments();
-        table.string("username").unique();
-        table.enu("permissionLevel", [
-          "visitor",
-          "user",
-          "admin:limited",
-          "admin:unlimited",
-        ] as ClientPermissionLevel[]);
+        table.string("username").unique().notNullable();
+        table
+          .enu("permissionLevel", [
+            "visitor",
+            "user",
+            "admin:limited",
+            "admin:unlimited",
+          ] as ClientPermissionLevel[])
+          .defaultTo("user")
+          .notNullable();
         table.specificType("hash", `CHAR(120) DEFAULT NULL`);
         table.specificType("salt", `CHAR(256) DEFAULT NULL`);
+        table.integer("chips").defaultTo(0);
         table.timestamps();
       });
 
