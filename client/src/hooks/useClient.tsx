@@ -14,7 +14,7 @@ export type ClientPermissionLevel =
   | "admin:unlimited";
 
 export interface AuthenticatedClient {
-  id: string;
+  id: number;
   username: string;
   permissionLevel: ClientPermissionLevel;
 }

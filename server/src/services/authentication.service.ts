@@ -8,13 +8,13 @@ import { CacheService } from "./cache.service";
 export type TokenKind = "access" | "refresh";
 
 export interface AuthenticatedClient {
-  id: string;
+  id: number;
   username: string;
   permissionLevel: ClientPermissionLevel;
 }
 
 export type ClientTokenData = {
-  id: string;
+  id: number;
   username: string;
   kind: TokenKind;
   permissionLevel: ClientPermissionLevel;
@@ -189,7 +189,7 @@ export class AuthenticationService {
     }
   }
 
-  public async getChipBalance(clientId: string) {
+  public async getChipBalance(clientId: number) {
     try {
       this.logger.info({ clientId }, "Getting chip balance for client.");
 

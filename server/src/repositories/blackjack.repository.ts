@@ -3,7 +3,7 @@ import { BlackjackGame, BlackjackState } from "games";
 import { database } from "./common";
 
 interface Blackjack {
-  clientId: string;
+  clientId: number;
   active: boolean;
   state: BlackjackState;
   wager: number;
@@ -22,7 +22,7 @@ export class BlackjackRepository {
     }
   }
 
-  public async getActiveBlackjackGame(clientId: string) {
+  public async getActiveBlackjackGame(clientId: number) {
     this.logger.info({ clientId }, "Retrieving active Blackjack Game.");
 
     const game = await database<Blackjack>("blackjack")
@@ -34,7 +34,7 @@ export class BlackjackRepository {
   }
 
   public async createBlackjackGame(
-    clientId: string,
+    clientId: number,
     wager: number,
     winnings: number
   ) {
@@ -89,7 +89,7 @@ export class BlackjackRepository {
 
       await database.schema.createTable("blackjack", (table) => {
         table.increments();
-        table.string("clientId").references("clients.id").notNullable();
+        table.integer("clientId").references("clients.id").notNullable();
         table.boolean("active").defaultTo(true).notNullable();
         table
           .jsonb("state")

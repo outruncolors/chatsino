@@ -5,7 +5,7 @@ export class AdminService {
   private logger = new ChatsinoLogger(this.constructor.name);
   private clientRepository = new ClientRepository();
 
-  public async payClient(clientId: string, amount: number) {
+  public async payClient(clientId: number, amount: number) {
     try {
       this.logger.info({ clientId, amount }, "Paying a client.");
 

@@ -10,7 +10,7 @@ export type ClientPermissionLevel =
   | "admin:unlimited";
 
 export interface Client {
-  id: string;
+  id: number;
   username: string;
   permissionLevel: ClientPermissionLevel;
   chips: number;
@@ -38,7 +38,7 @@ export class ClientRepository {
     }
   }
 
-  public async getClient(clientId: string) {
+  public async getClient(clientId: number) {
     const client = await database<Client>("clients")
       .where("id", clientId)
       .first();
@@ -79,7 +79,7 @@ export class ClientRepository {
     }
   }
 
-  public async getChipBalance(clientId: string) {
+  public async getChipBalance(clientId: number) {
     const client = await this.getClient(clientId);
     return client?.chips ?? 0;
   }
@@ -110,7 +110,7 @@ export class ClientRepository {
     }
   }
 
-  public async payClient(clientId: string, amount: number) {
+  public async payClient(clientId: number, amount: number) {
     try {
       await database<Client>("clients")
         .where("id", clientId)
@@ -122,7 +122,7 @@ export class ClientRepository {
     }
   }
 
-  public async chargeClient(clientId: string, amount: number) {
+  public async chargeClient(clientId: number, amount: number) {
     try {
       const client = await this.getClient(clientId);
 
