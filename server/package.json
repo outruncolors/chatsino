@@ -8,7 +8,7 @@
     "start": "NODE_ENV=development yarn build && node build/chatsino | npx pino-pretty",
     "recreate": "cd .. && ./recreate.sh && cd ./server",
     "share": "cd .. && ./share.sh && cd ./server",
-    "test": "jest --runInBand --forceExit --coverage"
+    "test": "jest --forceExit --coverage"
   },
   "dependencies": {
     "@types/knex": "^0.16.1",

@@ -14,14 +14,14 @@ const SAMPLE_AUTHENTICATED_CLIENT = {
   permissionLevel: "admin:unlimited",
 };
 
-let VALIDATE_TOKEN_RESPONSE: null | typeof SAMPLE_AUTHENTICATED_CLIENT =
+let _validateTokenResponse: null | typeof SAMPLE_AUTHENTICATED_CLIENT =
   SAMPLE_AUTHENTICATED_CLIENT;
 
 jest.mock("services", () => ({
   ...jest.requireActual("services"),
   AuthenticationService: class {
     public async validateToken() {
-      return VALIDATE_TOKEN_RESPONSE;
+      return _validateTokenResponse;
     }
   },
 }));
@@ -94,7 +94,7 @@ describe("clientSettingMiddleware", () => {
   });
 
   it("should set a client to null and clear invalid tokens", async () => {
-    VALIDATE_TOKEN_RESPONSE = null;
+    _validateTokenResponse = null;
 
     const request = {
       client: undefined,
