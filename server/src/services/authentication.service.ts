@@ -8,11 +8,13 @@ import { CacheService } from "./cache.service";
 export type TokenKind = "access" | "refresh";
 
 export interface AuthenticatedClient {
+  id: string;
   username: string;
   permissionLevel: ClientPermissionLevel;
 }
 
 export type ClientTokenData = {
+  id: string;
   username: string;
   kind: TokenKind;
   permissionLevel: ClientPermissionLevel;
@@ -26,7 +28,8 @@ export class AuthenticationService {
 
   public async signup(
     username: string,
-    password: string
+    password: string,
+    permissionLevel: ClientPermissionLevel = "user"
   ): Promise<AuthenticatedClient> {
     try {
       this.logger.info(
@@ -47,13 +50,14 @@ export class AuthenticationService {
         username,
         hash,
         salt,
-        "admin:unlimited" // TODO: Change me.
+        permissionLevel
       );
 
       const client = await this.clientRepository.getClientByUsername(username);
 
       if (client) {
         return {
+          id: client.id,
           username,
           permissionLevel: client.permissionLevel,
         };
@@ -94,6 +98,7 @@ export class AuthenticationService {
           );
 
           return {
+            id: client.id,
             username,
             permissionLevel: client.permissionLevel,
           };
@@ -130,12 +135,14 @@ export class AuthenticationService {
         "A client successfully signed out."
       );
     } catch (error) {
-      this.logger.error(
-        { client: username, error: (error as Error).message },
-        "A client was unable to sign out."
-      );
+      if (error instanceof Error) {
+        this.logger.error(
+          { client: username, error: error.message },
+          "A client was unable to sign out."
+        );
 
-      throw error;
+        throw error;
+      }
     }
   }
 
@@ -149,7 +156,7 @@ export class AuthenticationService {
       await this.cacheService.verifyToken(token);
 
       // Does the permission level of the token match the specified user?
-      const { username, kind, permissionLevel } =
+      const { id, username, kind, permissionLevel } =
         (await this.cacheService.decodeToken(token)) as ClientTokenData;
 
       if (!username || !kind || !permissionLevel) {
@@ -171,6 +178,7 @@ export class AuthenticationService {
       }
 
       return {
+        id,
         username,
         kind,
         permissionLevel,
@@ -178,6 +186,25 @@ export class AuthenticationService {
       };
     } catch {
       return null;
+    }
+  }
+
+  public async getChipBalance(clientId: string) {
+    try {
+      this.logger.info({ clientId }, "Getting chip balance for client.");
+
+      const balance = await this.clientRepository.getChipBalance(clientId);
+
+      return balance;
+    } catch (error) {
+      if (error instanceof Error) {
+        this.logger.error(
+          { clientId, error: error.message },
+          "Unable to get chip balance for client."
+        );
+      }
+
+      return 0;
     }
   }
 
@@ -198,6 +225,7 @@ export class AuthenticationService {
     return this.cacheService.createToken(
       this.formatClientAccessLabel(client.username),
       {
+        id: client.id,
         username: client.username,
         kind: "access",
         permissionLevel: client.permissionLevel,

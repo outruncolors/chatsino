@@ -1,20 +1,19 @@
 import { useCallback, useMemo } from "react";
-import { axios } from "helpers";
-import { ServerResponse } from "shared";
+import { makeRequest } from "helpers";
+import { AuthenticatedClient } from "./useClient";
 
 export function useAuthentication() {
   const validate = useCallback(async () => {
     try {
       const response = await makeRequest<{
-        client: {
-          username: string;
-          kind: string;
-          permissionLevel: string;
-          permissions: string[];
-        }; // TODO: Shared type of AuthenticatedClient
+        client: AuthenticatedClient;
+        chips: number;
       }>("get", "/validate");
 
-      return response.client;
+      return {
+        client: response.client,
+        chips: response.chips,
+      };
     } catch (error) {
       console.error({ error }, "Unable to validate.");
       throw error;
@@ -27,6 +26,8 @@ export function useAuthentication() {
         username,
         password,
       });
+
+      window.location.reload();
     } catch (error) {
       console.error({ error }, "Unable to sign in.");
       throw error;
@@ -86,20 +87,3 @@ export function useAuthentication() {
     [validate, signin, signout, signup, requestTicket]
   );
 }
-
-// #region Helpers
-async function makeRequest<T>(
-  method: "get" | "post",
-  route: string,
-  body?: Record<string, string>
-): Promise<T> {
-  const response = await axios[method](route, body);
-  const data = response.data as ServerResponse<T>;
-
-  if (!data.error && data.result === "OK") {
-    return data.data;
-  } else {
-    throw new Error(data.message);
-  }
-}
-// #endregion

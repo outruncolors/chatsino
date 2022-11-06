@@ -1,33 +1,46 @@
 import { useEffect, useRef, useState } from "react";
 import { Chatsino, Signin, Signup } from "components";
-import { useAuthentication } from "hooks";
+import { ClientProvider, useAuthentication, useClient } from "hooks";
 
 type AppScreen = "signin" | "signup" | "chatsino" | "error";
 
-export function App() {
+function Inner() {
+  const { client, setClient, setChips } = useClient();
   const { validate } = useAuthentication();
+  const [screen, setScreen] = useState("signin" as AppScreen);
   const initiallyValidated = useRef(false);
   const [validating, setValidating] = useState(true);
   const [validationError, setValidationError] = useState(false);
-  const [signedIn, setSignedIn] = useState(false);
-  const [screen, setScreen] = useState("signin" as AppScreen);
 
   useEffect(() => {
     if (!initiallyValidated.current) {
       initiallyValidated.current = true;
 
-      validate()
-        .then((client) => setSignedIn(Boolean(client)))
-        .then(() => setValidating(false))
-        .catch(() => setValidationError(true));
+      const handleValidate = async () => {
+        try {
+          const { client, chips } = await validate();
+
+          if (client) {
+            setClient(client);
+            setChips(chips);
+          }
+        } catch (error) {
+          console.error(error);
+          setValidationError(true);
+        } finally {
+          setValidating(false);
+        }
+      };
+
+      handleValidate();
     }
-  }, [validate]);
+  }, [validate, setClient, setChips]);
 
   useEffect(() => {
-    if (signedIn && screen !== "chatsino") {
+    if (client && screen !== "chatsino") {
       setScreen("chatsino");
     }
-  }, [signedIn, screen]);
+  }, [client, screen]);
 
   useEffect(() => {
     if (validationError && screen !== "error") {
@@ -51,14 +64,10 @@ export function App() {
         <p>Validating...</p>
       ) : (
         <>
-          {!signedIn && (
+          {!client && (
             <>
-              {screen === "signin" && (
-                <Signin onSignin={() => setSignedIn(true)} />
-              )}
-              {screen === "signup" && (
-                <Signup onSignup={() => setSignedIn(true)} />
-              )}
+              {screen === "signin" && <Signin />}
+              {screen === "signup" && <Signup />}
             </>
           )}
           {screen === "chatsino" && <Chatsino />}
@@ -66,5 +75,13 @@ export function App() {
         </>
       )}
     </section>
+  );
+}
+
+export function App() {
+  return (
+    <ClientProvider>
+      <Inner />
+    </ClientProvider>
   );
 }

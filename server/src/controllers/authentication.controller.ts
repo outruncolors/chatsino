@@ -25,6 +25,9 @@ export class AuthenticationController {
 
       return successResponse(res, "Validation request succeeded.", {
         client: req.client,
+        chips: req.client?.id
+          ? await this.authenticationService.getChipBalance(req.client.id)
+          : 0,
       });
     } catch (error) {
       if (error instanceof Error) {

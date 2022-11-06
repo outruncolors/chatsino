@@ -13,9 +13,9 @@ export interface Client {
   id: string;
   username: string;
   permissionLevel: ClientPermissionLevel;
+  chips: number;
   hash: string;
   salt: string;
-  chips: number;
 }
 
 export type SafeClient = Omit<Client, "hash" | "salt">;
@@ -79,6 +79,11 @@ export class ClientRepository {
     }
   }
 
+  public async getChipBalance(clientId: string) {
+    const client = await this.getClient(clientId);
+    return client?.chips ?? 0;
+  }
+
   public async createClient(
     username: string,
     hash: string,
@@ -135,6 +140,14 @@ export class ClientRepository {
     }
   }
 
+  public create() {
+    return this.initialize();
+  }
+
+  public destroy() {
+    return this.dropTable();
+  }
+
   private async initialize() {
     try {
       this.logger.info("Initializing Client repository.");
@@ -182,5 +195,10 @@ export class ClientRepository {
 
       this.logger.info(`Successfully created table "clients".`);
     }
+  }
+
+  private dropTable() {
+    this.logger.info(`Dropping table "clients".`);
+    return database.schema.dropTableIfExists("clients");
   }
 }

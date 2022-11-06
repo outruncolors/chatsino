@@ -29,3 +29,10 @@ export const clientSignupSchema = clientSigninSchema.shape({
 
 export interface ClientSignupSchema
   extends yup.InferType<typeof clientSignupSchema> {}
+
+export const adminPaySchema = yup.object({
+  clientId: yup.string().required(),
+  amount: yup.number().positive().min(1).required(),
+});
+
+export interface AdminPaySchema extends yup.InferType<typeof adminPaySchema> {}

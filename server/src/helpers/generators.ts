@@ -12,6 +12,7 @@ export class TestGenerator {
       permissionLevel: "admin:unlimited",
       hash: chance.hash(),
       salt: chance.hash(),
+      chips: 0,
       ...overrides,
     };
   }
@@ -20,6 +21,7 @@ export class TestGenerator {
     overrides: Partial<AuthenticatedClient> = {}
   ): AuthenticatedClient {
     return {
+      id: chance.integer().toString(),
       username: chance.name(),
       permissionLevel: "admin:unlimited",
       ...overrides,

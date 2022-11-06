@@ -10,6 +10,9 @@ const options = {
   bundle: true,
   minify: process.env.NODE_ENV === "production",
   define: {
+    "process.env.SCRIPT": process.env.SCRIPT
+      ? `"${process.env.SCRIPT}"`
+      : undefined,
     "process.env.NODE_ENV": `"${process.env.NODE_ENV ?? "development"}"`,
     "process.env.VERSION": `"${package.version}"`,
     "process.env.PORT": process.env.PORT,

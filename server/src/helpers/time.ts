@@ -7,3 +7,8 @@ export function now() {
 export function secondsSince(time: number) {
   return now() - time;
 }
+
+/** @desc Wait a specified period of time before continuing. */
+export function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}

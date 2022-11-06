@@ -3,17 +3,13 @@ import { useAuthentication } from "hooks";
 import { Formik, FormikHelpers, Form, Field, ErrorMessage } from "formik";
 import { ClientSigninSchema, clientSigninSchema } from "shared";
 
-type Props = {
-  onSignin(): unknown;
-};
-
 const INITIAL_SIGNIN_VALUES: ClientSigninSchema = {
   username: "",
   password: "",
 };
 
-export function Signin({ onSignin }: Props) {
-  const { handleSubmit, error } = useSigninForm(onSignin);
+export function Signin() {
+  const { handleSubmit, error } = useSigninForm();
 
   return (
     <Formik
@@ -58,7 +54,7 @@ export function Signin({ onSignin }: Props) {
   );
 }
 
-function useSigninForm(onSignin: () => unknown) {
+function useSigninForm() {
   const { signin } = useAuthentication();
   const [error, setError] = useState("");
   const handleSubmit = useCallback(
@@ -69,7 +65,6 @@ function useSigninForm(onSignin: () => unknown) {
       const handleSignin = async () => {
         try {
           await signin(username, password);
-          onSignin();
         } catch (error) {
           console.error("Unable to sign in.", error);
           setError("Failed to sign in");
@@ -78,7 +73,7 @@ function useSigninForm(onSignin: () => unknown) {
 
       handleSignin();
     },
-    [signin, onSignin]
+    [signin]
   );
 
   return {

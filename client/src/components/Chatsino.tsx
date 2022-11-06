@@ -1,7 +1,8 @@
-import { useAuthentication, useSocket } from "hooks";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useAuthentication, useClient, useSocket } from "hooks";
 
 export function Chatsino() {
+  const { client } = useClient();
   const retrievingTicket = useRef(false);
   const [ticket, setTicket] = useState("");
   const [ticketError, setTicketError] = useState("");
@@ -43,6 +44,7 @@ export function Chatsino() {
           </button>
         </>
       )}
+      {JSON.stringify(client)}
     </div>
   );
 }
