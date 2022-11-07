@@ -1,6 +1,5 @@
 import { ChatsinoLogger } from "logging";
 import { AdminService, AuthenticationService } from "services";
-import { sleep } from "helpers";
 import { BlackjackRepository, ClientRepository } from "repositories";
 
 const DEFAULT_PASSWORD = "password";
@@ -13,12 +12,13 @@ const blackjackRepository = new BlackjackRepository();
 const clientRepository = new ClientRepository();
 
 export async function seed() {
-  await sleep(2000);
-
-  logger.info("Executing.");
+  logger.info("Seeding database...");
 
   await destroyRepositories();
+  await createRepositories();
   await seedClients();
+
+  logger.info("Seeding complete.");
 }
 
 async function destroyRepositories() {
@@ -26,21 +26,22 @@ async function destroyRepositories() {
   await clientRepository.destroy();
 }
 
+async function createRepositories() {
+  await clientRepository.create();
+  await blackjackRepository.create();
+}
+
 async function seedClients() {
   logger.info("Seeding clients...");
 
-  await clientRepository.create();
   const { id } = await authenticationService.signup(
     "admin",
     DEFAULT_PASSWORD,
-    "admin:unlimited"
-  );
-  await adminService.payClient(id, DEFAULT_TOKEN_BALANCE);
-  await authenticationService.signup(
-    "admin2",
-    DEFAULT_PASSWORD,
     "admin:limited"
   );
+  await adminService.payClient(id, DEFAULT_TOKEN_BALANCE);
+  await adminService.changeClientPermissionLevel(id, "admin:unlimited");
+  await authenticationService.signup("admin2", DEFAULT_PASSWORD, "user");
   await authenticationService.signup("client", DEFAULT_PASSWORD, "user");
   await authenticationService.signup("client2", DEFAULT_PASSWORD, "user");
 

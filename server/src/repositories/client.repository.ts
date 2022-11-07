@@ -112,28 +112,55 @@ export class ClientRepository {
 
   public async payClient(clientId: number, amount: number) {
     try {
+      this.logger.info({ clientId, amount }, "Paying a client.");
+
       await database<Client>("clients")
         .where("id", clientId)
         .increment("chips", amount);
 
+      this.logger.info("Paid a client.");
+
       return true;
     } catch (error) {
+      if (error instanceof Error) {
+        this.logger.error("Unable to pay a client.");
+      }
+
       return false;
     }
   }
 
   public async chargeClient(clientId: number, amount: number) {
-    const canAfford = await this.canClientAfford(clientId, amount);
+    try {
+      this.logger.info({ clientId, amount }, "Charging a client.");
 
-    if (canAfford) {
+      const canAfford = await this.canClientAfford(clientId, amount);
+
+      if (!canAfford) {
+        throw new CannotAffordError();
+      }
+
       await database<Client>("clients")
         .where("id", clientId)
         .decrement("chips", amount);
 
-      return true;
-    }
+      this.logger.info("Charged a client.");
 
-    return false;
+      return true;
+    } catch (error) {
+      if (error instanceof CannotAffordError) {
+        this.logger.error("Client cannot afford charge.");
+      }
+
+      if (error instanceof Error) {
+        this.logger.error(
+          { error: error.message },
+          "Unable to charge a client."
+        );
+      }
+
+      return false;
+    }
   }
 
   public async canClientAfford(clientId: number, amount: number) {
@@ -147,6 +174,33 @@ export class ClientRepository {
       return true;
     } catch (error) {
       return false;
+    }
+  }
+
+  public async changeClientPermissionLevel(
+    clientId: number,
+    permissionLevel: ClientPermissionLevel
+  ) {
+    try {
+      this.logger.info(
+        { clientId, permissionLevel },
+        "Changing a client's permission level."
+      );
+
+      await database<Client>("clients").where("id", clientId).update({
+        permissionLevel,
+      });
+
+      this.logger.info("Changed a client's permission level.");
+    } catch (error) {
+      if (error instanceof Error) {
+        this.logger.error(
+          { error: error.message },
+          "Unable to change a client's permission level."
+        );
+      }
+
+      throw error;
     }
   }
 
@@ -212,3 +266,5 @@ export class ClientRepository {
     return database.schema.dropTableIfExists("clients");
   }
 }
+
+class CannotAffordError extends Error {}
