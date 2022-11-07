@@ -1,6 +1,6 @@
-import * as config from "config";
-import { ChatsinoLogger } from "logging";
+import { BaseRepository } from "./base.repository";
 import { CacheService } from "services";
+import * as config from "config";
 import { database } from "./common";
 
 export type ClientPermissionLevel =
@@ -20,10 +20,31 @@ export interface Client {
 
 export type SafeClient = Omit<Client, "hash" | "salt">;
 
-let initializingClientRepository = false;
+async function createClientTable() {
+  const exists = await database.schema.hasTable("clients");
 
-export class ClientRepository {
-  private logger = new ChatsinoLogger(this.constructor.name);
+  if (!exists) {
+    return database.schema.createTable("clients", (table) => {
+      table.increments("id", { primaryKey: true });
+      table.string("username").unique().notNullable();
+      table
+        .enu("permissionLevel", [
+          "visitor",
+          "user",
+          "admin:limited",
+          "admin:unlimited",
+        ] as ClientPermissionLevel[])
+        .defaultTo("user")
+        .notNullable();
+      table.specificType("hash", `CHAR(120) DEFAULT NULL`);
+      table.specificType("salt", `CHAR(256) DEFAULT NULL`);
+      table.integer("chips").defaultTo(0);
+      table.timestamps(true, true, true);
+    });
+  }
+}
+
+export class ClientRepository extends BaseRepository {
   private cacheService = new CacheService();
 
   public static safetify(client: Client) {
@@ -32,10 +53,7 @@ export class ClientRepository {
   }
 
   public constructor() {
-    if (!initializingClientRepository) {
-      initializingClientRepository = true;
-      this.initialize();
-    }
+    super("clients", createClientTable);
   }
 
   public async getClient(clientId: number) {
@@ -203,68 +221,6 @@ export class ClientRepository {
       throw error;
     }
   }
-
-  public create() {
-    return this.initialize();
-  }
-
-  public destroy() {
-    return this.dropTable();
-  }
-
-  private async initialize() {
-    try {
-      this.logger.info("Initializing client repository.");
-
-      await this.createTable();
-
-      this.logger.info("Client repository successfully initialized.");
-    } catch (error) {
-      if (error instanceof Error) {
-        this.logger.error(
-          { error: error.message },
-          "Failed to initialize client repository."
-        );
-
-        throw error;
-      }
-    }
-  }
-
-  private async createTable() {
-    const hasTable = await database.schema.hasTable("clients");
-
-    if (hasTable) {
-      this.logger.info(`Table "clients" already exists.`);
-    } else {
-      this.logger.info(`Creating table "clients".`);
-
-      await database.schema.createTable("clients", (table) => {
-        table.increments("id", { primaryKey: true });
-        table.string("username").unique().notNullable();
-        table
-          .enu("permissionLevel", [
-            "visitor",
-            "user",
-            "admin:limited",
-            "admin:unlimited",
-          ] as ClientPermissionLevel[])
-          .defaultTo("user")
-          .notNullable();
-        table.specificType("hash", `CHAR(120) DEFAULT NULL`);
-        table.specificType("salt", `CHAR(256) DEFAULT NULL`);
-        table.integer("chips").defaultTo(0);
-        table.timestamps(true, true, true);
-      });
-
-      this.logger.info(`Successfully created table "clients".`);
-    }
-  }
-
-  private dropTable() {
-    this.logger.info(`Dropping table "clients".`);
-    return database.schema.dropTableIfExists("clients");
-  }
 }
 
-class CannotAffordError extends Error {}
+export class CannotAffordError extends Error {}

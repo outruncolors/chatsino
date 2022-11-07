@@ -1,8 +1,20 @@
 import * as yup from "yup";
 import * as config from "./config";
 
+type ClientPermissionLevel =
+  | "visitor"
+  | "user"
+  | "admin:limited"
+  | "admin:unlimited";
+
 const PASSWORD_MESSAGE = `A password must include a minimum of ${config.MINIMUM_PASSWORD_SIZE} characters.`;
 
+export const PERMISSION_RANKING: ClientPermissionLevel[] = [
+  "visitor",
+  "user",
+  "admin:limited",
+  "admin:unlimited",
+];
 export const clientSigninSchema = yup.object({
   username: yup.string().required("A username is required."),
   password: yup
@@ -36,3 +48,13 @@ export const adminPaySchema = yup.object({
 });
 
 export interface AdminPaySchema extends yup.InferType<typeof adminPaySchema> {}
+
+export const adminChangePermissionSchema = yup.object({
+  clientId: yup.string().required(),
+  permissionLevel: yup.string().oneOf(PERMISSION_RANKING),
+});
+
+export interface AdminChangePermissionSchema
+  extends yup.InferType<typeof adminChangePermissionSchema> {
+  permissionLevel: ClientPermissionLevel;
+}

@@ -85,11 +85,11 @@ export class BlackjackService {
           break;
       }
 
-      data.state = game.serialize();
-
-      if (data.state.status !== "playing") {
+      if (game.status !== "playing") {
         await this.payout(data);
       }
+
+      data.state = game.serialize();
 
       await this.save(clientId, data);
 

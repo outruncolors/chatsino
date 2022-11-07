@@ -77,6 +77,7 @@ if (process.env.SCRIPT) {
     adminRouter.post("/charge", adminController.handleChargeRequest);
     adminRouter.post(
       "/change-permission",
+      authenticatedRouteMiddleware("admin:unlimited"),
       adminController.handleChangePermissionRequest
     );
 
