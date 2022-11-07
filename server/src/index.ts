@@ -74,6 +74,7 @@ if (process.env.SCRIPT) {
 
     const adminController = new AdminController();
     adminRouter.post("/pay", adminController.handlePayRequest);
+    adminRouter.post("/charge", adminController.handleChargeRequest);
 
     apiRouter.use("/admin", adminRouter);
     app.use("/api", apiRouter);

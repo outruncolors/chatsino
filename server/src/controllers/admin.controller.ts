@@ -36,4 +36,35 @@ export class AdminController {
       }
     }
   }
+
+  // [/api/admin/charge]
+  public async handleChargeRequest(req: AuthenticatedRequest, res: Response) {
+    try {
+      this.logger.info(
+        {
+          admin: req.client?.username,
+          clientToCharge: req.body.clientId,
+          amount: req.body.amount,
+        },
+        "Received a request to charge a user."
+      );
+
+      const { clientId, amount } = await adminPaySchema.validate(req.body);
+
+      await this.adminService.chargeClient(clientId, amount);
+
+      this.logger.info("Successfully charged a client.");
+
+      return successResponse(res, `Charged client ${amount} chips.`);
+    } catch (error) {
+      if (error instanceof Error) {
+        this.logger.error(
+          { error: error.message },
+          "Unable to charge a client."
+        );
+
+        return errorResponse(res, "Failed to charge client.");
+      }
+    }
+  }
 }

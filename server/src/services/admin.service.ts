@@ -16,4 +16,16 @@ export class AdminService {
       }
     }
   }
+
+  public async chargeClient(clientId: number, amount: number) {
+    try {
+      this.logger.info({ clientId, amount }, "Charging a client.");
+
+      return this.clientRepository.chargeClient(clientId, amount);
+    } catch (error) {
+      if (error instanceof Error) {
+        this.logger.error({ error: error.message }, "Unable to pay a client.");
+      }
+    }
+  }
 }
