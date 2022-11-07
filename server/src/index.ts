@@ -75,6 +75,10 @@ if (process.env.SCRIPT) {
     const adminController = new AdminController();
     adminRouter.post("/pay", adminController.handlePayRequest);
     adminRouter.post("/charge", adminController.handleChargeRequest);
+    adminRouter.post(
+      "/change-permission",
+      adminController.handleChangePermissionRequest
+    );
 
     apiRouter.use("/admin", adminRouter);
     app.use("/api", apiRouter);

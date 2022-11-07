@@ -1,7 +1,11 @@
 import { Response } from "express";
 import { ChatsinoLogger } from "logging";
 import { AuthenticatedRequest } from "middleware";
-import { adminPaySchema } from "shared";
+import {
+  AdminChangePermissionSchema,
+  adminChangePermissionSchema,
+  adminPaySchema,
+} from "shared";
 import { successResponse, errorResponse } from "helpers";
 import { AdminService } from "services";
 
@@ -64,6 +68,52 @@ export class AdminController {
         );
 
         return errorResponse(res, "Failed to charge client.");
+      }
+    }
+  }
+
+  // [/api/admin/change-permission]
+  public async handleChangePermissionRequest(
+    req: AuthenticatedRequest,
+    res: Response
+  ) {
+    try {
+      this.logger.info(
+        {
+          admin: req.client?.username,
+          clientToChangePermission: req.body.clientId,
+          permissionLevel: req.body.permissionLevel,
+        },
+        "Received a request to change a client's permission level."
+      );
+
+      const { clientId, permissionLevel } =
+        (await adminChangePermissionSchema.validate(
+          req.body
+        )) as AdminChangePermissionSchema;
+
+      await this.adminService.changeClientPermissionLevel(
+        clientId,
+        permissionLevel
+      );
+
+      this.logger.info("Successfully changed a client's permission level.");
+
+      return successResponse(
+        res,
+        `Changed client's permission level to ${permissionLevel}.`
+      );
+    } catch (error) {
+      if (error instanceof Error) {
+        this.logger.error(
+          { error: error.message },
+          "Unable to change a client's permission level."
+        );
+
+        return errorResponse(
+          res,
+          "Failed to change client's permission level."
+        );
       }
     }
   }
