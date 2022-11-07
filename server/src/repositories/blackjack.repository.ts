@@ -115,7 +115,7 @@ export class BlackjackRepository {
         table.jsonb("state");
         table.integer("wager").defaultTo(0).notNullable();
         table.integer("winnings").defaultTo(0).notNullable();
-        table.timestamps(true);
+        table.timestamps(true, true, true);
       });
 
       this.logger.info(`Successfully created table "blackjack".`);

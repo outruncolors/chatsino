@@ -91,7 +91,7 @@ export class ClientRepository {
     permissionLevel: ClientPermissionLevel
   ) {
     try {
-      this.logger.info({ username, permissionLevel }, "Creating a Client.");
+      this.logger.info({ username, permissionLevel }, "Creating a client.");
 
       await database<Client>("clients").insert({
         username,
@@ -100,10 +100,10 @@ export class ClientRepository {
         permissionLevel,
       });
 
-      this.logger.info("Successfully created a Client.");
+      this.logger.info("Successfully created a client.");
     } catch (error) {
       if (error instanceof Error) {
-        this.logger.error({ error: error.message }, "Failed to create Client.");
+        this.logger.error({ error: error.message }, "Failed to create client.");
 
         throw error;
       }
@@ -200,7 +200,7 @@ export class ClientRepository {
         table.specificType("hash", `CHAR(120) DEFAULT NULL`);
         table.specificType("salt", `CHAR(256) DEFAULT NULL`);
         table.integer("chips").defaultTo(0);
-        table.timestamps(true);
+        table.timestamps(true, true, true);
       });
 
       this.logger.info(`Successfully created table "clients".`);

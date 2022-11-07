@@ -29,6 +29,8 @@ export function useSocket() {
           if (attemptingToReconnect.current) {
             clearInterval(attemptingToReconnect.current);
           }
+
+          socket.current?.send(JSON.stringify({ foo: "bar" }));
         };
 
         socket.current.onclose = function handleSocketClose(event) {

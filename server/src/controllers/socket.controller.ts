@@ -165,7 +165,7 @@ export class SocketController {
     try {
       await this.verifyClient(ws);
 
-      const message = data.toString();
+      const message = JSON.parse(data.toString());
 
       this.logger.info(
         { client: this.socketToClientMap.get(ws), message },

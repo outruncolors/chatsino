@@ -87,7 +87,6 @@ export class BlackjackService {
 
       data.state = game.serialize();
 
-      // Do stuff based on game status.
       if (data.state.status !== "playing") {
         await this.payout(data);
       }
