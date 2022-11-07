@@ -1,8 +1,8 @@
 import { ChatsinoLogger } from "logging";
-import { BlackjackGame, BlackjackState } from "games";
 import { database } from "./common";
+import type { BlackjackGame, BlackjackState } from "games";
 
-interface Blackjack {
+export interface Blackjack {
   clientId: number;
   active: boolean;
   state: BlackjackState;
@@ -23,7 +23,7 @@ export class BlackjackRepository {
   }
 
   public async getActiveBlackjackGame(clientId: number) {
-    this.logger.info({ clientId }, "Retrieving active Blackjack Game.");
+    this.logger.info({ clientId }, "Retrieving active blackjack game.");
 
     const game = await database<Blackjack>("blackjack")
       .where("clientId", clientId)
@@ -33,26 +33,39 @@ export class BlackjackRepository {
     return game || null;
   }
 
+  public async setActiveBlackjackGame(
+    clientId: number,
+    gameData: Partial<Blackjack>
+  ) {
+    this.logger.info({ clientId }, "Updating an active blackjack game.");
+
+    await database<Blackjack>("blackjack")
+      .where("clientId", clientId)
+      .where("active", true)
+      .update(gameData);
+  }
+
   public async createBlackjackGame(
     clientId: number,
     wager: number,
-    winnings: number
+    state: BlackjackState
   ) {
     try {
-      this.logger.info({ clientId }, "Creating a Blackjack Game.");
+      this.logger.info({ clientId }, "Creating a blackjack game.");
 
       await database<Blackjack>("blackjack").insert({
         clientId,
         wager,
-        winnings,
+        state,
+        winnings: 0,
       });
 
-      this.logger.info("Successfully created a Blackjack Game.");
+      this.logger.info("Successfully created a blackjack game.");
     } catch (error) {
       if (error instanceof Error) {
         this.logger.error(
           { error: error.message },
-          "Failed to create Blackjack Game."
+          "Failed to create blackjack game."
         );
 
         throw error;
@@ -70,7 +83,7 @@ export class BlackjackRepository {
 
   private async initialize() {
     try {
-      this.logger.info("Initializing Blackjack repository.");
+      this.logger.info("Initializing blackjack repository.");
 
       await this.createTable();
 
@@ -79,7 +92,7 @@ export class BlackjackRepository {
       if (error instanceof Error) {
         this.logger.error(
           { error: error.message },
-          "Failed to initialize Blackjack repository."
+          "Failed to initialize blackjack repository."
         );
 
         throw error;

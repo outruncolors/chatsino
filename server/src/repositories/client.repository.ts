@@ -123,16 +123,26 @@ export class ClientRepository {
   }
 
   public async chargeClient(clientId: number, amount: number) {
+    const canAfford = await this.canClientAfford(clientId, amount);
+
+    if (canAfford) {
+      await database<Client>("clients")
+        .where("id", clientId)
+        .decrement("chips", amount);
+
+      return true;
+    }
+
+    return false;
+  }
+
+  public async canClientAfford(clientId: number, amount: number) {
     try {
       const client = await this.getClient(clientId);
 
       if (!client || client.chips < amount) {
         return false;
       }
-
-      await database<Client>("clients")
-        .where("id", clientId)
-        .decrement("chips", amount);
 
       return true;
     } catch (error) {

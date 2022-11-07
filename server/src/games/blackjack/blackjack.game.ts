@@ -8,13 +8,9 @@ const config = {
   ...gameConfig,
 };
 
-export type BlackjackStatus =
-  | "waiting"
-  | "playing"
-  | "pushed"
-  | "won"
-  | "lost"
-  | "blackjack";
+export type FinishedBlackjackStatus = "pushed" | "won" | "lost" | "blackjack";
+
+export type BlackjackStatus = FinishedBlackjackStatus | "waiting" | "playing";
 
 export type BlackjackAction =
   | "deal"
@@ -184,7 +180,7 @@ export class BlackjackGame {
   }
 
   public deal() {
-    this.ensurePlaying();
+    this.ensureNotPlaying();
 
     const [first, second, third] = this.deck;
 
@@ -209,7 +205,12 @@ export class BlackjackGame {
   public doubleDown() {
     this.ensurePlaying();
 
+    if (!this.playerCanDoubleDown) {
+      throw new CannotTakeActionError();
+    }
+
     this.playerDoubledDown = true;
+
     this.hit();
     this.stay();
   }
@@ -217,9 +218,11 @@ export class BlackjackGame {
   public buyInsurance() {
     this.ensurePlaying();
 
-    if (this.playerCanPurchaseInsurance) {
-      this.playerBoughtInsurance = true;
+    if (!this.playerCanPurchaseInsurance) {
+      throw new CannotTakeActionError();
     }
+
+    this.playerBoughtInsurance = true;
   }
 
   public serialize(): BlackjackState {
@@ -236,25 +239,33 @@ export class BlackjackGame {
     };
   }
 
-  public deserialize(serializedState: string) {
+  public deserialize(state: BlackjackState) {
     const {
       dealerCards,
       playerCards,
       playerBoughtInsurance,
       playerDoubledDown,
       playerStayed,
-    } = JSON.parse(serializedState) as BlackjackState;
+    } = state;
 
     this.dealerCards = dealerCards;
     this.playerCards = playerCards;
     this.playerBoughtInsurance = playerBoughtInsurance;
     this.playerDoubledDown = playerDoubledDown;
     this.playerStayed = playerStayed;
+
+    return this;
   }
 
   private ensurePlaying() {
     if (this.status !== "playing") {
-      throw new Error("Game is not being played.");
+      throw new NoGameInProgressError();
+    }
+  }
+
+  private ensureNotPlaying() {
+    if (this.status === "playing") {
+      throw new GameInProgressError();
     }
   }
 
@@ -267,3 +278,7 @@ export class BlackjackGame {
     }
   }
 }
+
+export class GameInProgressError extends Error {}
+export class NoGameInProgressError extends Error {}
+export class CannotTakeActionError extends Error {}

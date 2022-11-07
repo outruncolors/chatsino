@@ -7,7 +7,7 @@ const chance = new Chance();
 export class TestGenerator {
   public static createClient(overrides: Partial<Client> = {}): Client {
     return {
-      id: chance.guid(),
+      id: chance.integer(),
       username: chance.name(),
       permissionLevel: "admin:unlimited",
       hash: chance.hash(),
@@ -21,7 +21,7 @@ export class TestGenerator {
     overrides: Partial<AuthenticatedClient> = {}
   ): AuthenticatedClient {
     return {
-      id: chance.integer().toString(),
+      id: chance.integer(),
       username: chance.name(),
       permissionLevel: "admin:unlimited",
       ...overrides,

@@ -4,8 +4,8 @@ import { Duplex } from "stream";
 import { RawData, WebSocket, WebSocketServer } from "ws";
 import { ChatsinoLogger } from "logging";
 import { TicketService } from "services";
-import * as config from "config";
 import { SafeClient } from "repositories";
+import * as config from "config";
 
 export class SocketController {
   private logger = new ChatsinoLogger(this.constructor.name);
@@ -50,6 +50,7 @@ export class SocketController {
     } = request;
 
     if (!remoteAddress) {
+      this.logger.error("Missing remote address.");
       return deny();
     }
 
@@ -59,6 +60,7 @@ export class SocketController {
     );
 
     if (!client) {
+      this.logger.error("Missing client.");
       return deny();
     }
 
@@ -101,13 +103,13 @@ export class SocketController {
         },
         "Client successfully connected."
       );
-
-      ws.send("hi");
     } catch (error) {
-      this.logger.error(
-        { error: (error as Error).message },
-        "Client failed to connect."
-      );
+      if (error instanceof Error) {
+        this.logger.error(
+          { error: error.message },
+          "Client failed to connect."
+        );
+      }
     }
   };
 
@@ -222,5 +224,9 @@ export class SocketController {
       this.logger.error("Failed to verify a client.");
       throw new Error("Unable to verify client.");
     }
+  };
+
+  private handleMessage = (channel: string, message: string) => {
+    console.log("Received", channel, message);
   };
 }

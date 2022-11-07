@@ -13,34 +13,12 @@ services:
       - 5432:5432
     volumes:
       - database:/var/lib/postgresql/data
-      - ./database/init.sql:/docker-entrypoint-initdb.d/create_tables.sql
 
   redis:
     image: redis
     container_name: cache
     ports:
       - 6379:6379
-
-  # server:
-  #   container_name: server
-  #   restart: always
-  #   working_dir: /server
-  #   build:
-  #     context: ./server
-  #     dockerfile: Dockerfile
-  #   depends_on:
-  #     - database
-  #   links:
-  #     - database
-  #   ports:
-  #     - 9001:9001
-
-  # client:
-  #   container_name: client
-  #   working_dir: /client
-  #   build:
-  #     context: ./client
-  #     dockerfile: Dockerfile
 
 volumes:
   database:
