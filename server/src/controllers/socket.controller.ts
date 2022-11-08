@@ -3,9 +3,22 @@ import { Request } from "express";
 import { Duplex } from "stream";
 import { RawData, WebSocket, WebSocketServer } from "ws";
 import { ChatsinoLogger } from "logging";
-import { TicketService } from "services";
+import { AuthenticatedClient, TicketService } from "services";
 import { SafeClient } from "repositories";
+import {
+  RequestArg,
+  SourcedSocketMessageSchema,
+  socketMessageSchema,
+  sourcedSocketMessageSchema,
+} from "shared";
 import * as config from "config";
+import { createClient } from "redis";
+
+const subscriber = createClient();
+const publisher = createClient();
+
+subscriber.connect();
+publisher.connect();
 
 export class SocketController {
   private logger = new ChatsinoLogger(this.constructor.name);
@@ -22,6 +35,8 @@ export class SocketController {
 
     this.wss = wss;
     this.checkingForDeadConnections = this.checkForDeadConnections();
+
+    subscriber.subscribe("client-message", this.handleSubscribedMessage);
   }
 
   public shutdown = () => this.handleServerClose();
@@ -172,12 +187,21 @@ export class SocketController {
         "Received a message from a client."
       );
 
-      // Do stuff.
+      await socketMessageSchema.validate(message);
+
+      const sourcedMessage = {
+        ...message,
+        from: this.socketToClientMap.get(ws),
+      };
+
+      publisher.publish("client-message", JSON.stringify(sourcedMessage));
     } catch (error) {
-      this.logger.error(
-        { error: (error as Error).message },
-        "Failed to receive message from client."
-      );
+      if (error instanceof Error) {
+        this.logger.error(
+          { error: error.message },
+          "Failed to receive message from client."
+        );
+      }
     }
   };
 
@@ -226,7 +250,24 @@ export class SocketController {
     }
   };
 
-  private handleMessage = (channel: string, message: string) => {
-    console.log("Received", channel, message);
+  private handleSubscribedMessage = async (messageString: string) => {
+    try {
+      const message = JSON.parse(messageString);
+
+      this.logger.info({ message }, "Attempting to handle subscribed message.");
+
+      const { kind, args, from } = (await sourcedSocketMessageSchema.validate(
+        message
+      )) as SourcedSocketMessageSchema;
+
+      // Handle.
+    } catch (error) {
+      if (error instanceof Error) {
+        this.logger.error(
+          { error: error.message },
+          "Unable to handle subscribed message."
+        );
+      }
+    }
   };
 }

@@ -58,3 +58,39 @@ export interface AdminChangePermissionSchema
   extends yup.InferType<typeof adminChangePermissionSchema> {
   permissionLevel: ClientPermissionLevel;
 }
+
+export const socketMessageSchema = yup.object({
+  kind: yup.string().required(),
+  args: yup.array(),
+});
+
+export type RequestArg = string | number | null;
+
+export interface SocketMessageSchema
+  extends yup.InferType<typeof socketMessageSchema> {
+  args: RequestArg[];
+}
+
+export const authenticatedClientSchema = yup.object({
+  id: yup.number().required(),
+  username: yup.string().required(),
+  permissionLevel: yup.string().oneOf(PERMISSION_RANKING).required(),
+  chips: yup.number().required(),
+  createdAt: yup.string().required(),
+  updatedAt: yup.string().required(),
+});
+
+export const sourcedSocketMessageSchema = socketMessageSchema.shape({
+  from: authenticatedClientSchema,
+});
+
+export interface SourcedSocketMessageSchema extends SocketMessageSchema {
+  from: {
+    id: number;
+    username: string;
+    permissionLevel: ClientPermissionLevel;
+    chips: number;
+    createdAt: string;
+    updatedAt: string;
+  };
+}
