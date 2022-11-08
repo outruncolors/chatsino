@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { Chatsino, Signin, Signup } from "components";
-import { ClientProvider, useAuthentication, useClient } from "hooks";
+import {
+  ClientProvider,
+  SocketProvider,
+  useAuthentication,
+  useClient,
+} from "hooks";
 
 type AppScreen = "signin" | "signup" | "chatsino" | "error";
 
@@ -81,7 +86,9 @@ function Inner() {
 export function App() {
   return (
     <ClientProvider>
-      <Inner />
+      <SocketProvider>
+        <Inner />
+      </SocketProvider>
     </ClientProvider>
   );
 }

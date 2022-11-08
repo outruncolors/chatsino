@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuthentication, useClient, useSocket } from "hooks";
 import { Admin } from "./Admin";
+import { Game } from "./games";
 
 export function Chatsino() {
   const { client } = useClient();
@@ -44,5 +45,9 @@ function Lobby() {
     }
   });
 
-  return <div>Lobby</div>;
+  return (
+    <div>
+      Lobby <br /> <Game />
+    </div>
+  );
 }
