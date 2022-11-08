@@ -42,6 +42,10 @@ export class BlackjackGame {
   }
 
   public static getHandValue(cards: string[]) {
+    if (cards.length === 0) {
+      return 0;
+    }
+
     const possibilities: number[] = [];
     const valueWithoutAces = cards
       .map(BlackjackGame.getCardValue)
@@ -112,7 +116,7 @@ export class BlackjackGame {
         return prev;
       }, {} as Record<string, number>);
     const cardsRemaining = deck.reduce((prev, next) => {
-      const amount = config.DECK_COUNT - cardsAlreadyDealt[next] ?? 0;
+      const amount = config.DECK_COUNT - (cardsAlreadyDealt[next] ?? 0);
       return prev.concat(Array.from({ length: amount }, () => next));
     }, [] as string[]);
 
@@ -228,12 +232,12 @@ export class BlackjackGame {
   public serialize(): BlackjackState {
     return {
       dealerCards: this.dealerCards,
-      dealerValue: this.dealerValue,
       playerCards: this.playerCards,
-      playerValue: this.playerValue,
       playerBoughtInsurance: this.playerBoughtInsurance,
       playerDoubledDown: this.playerDoubledDown,
       playerStayed: this.playerStayed,
+      dealerValue: this.dealerValue,
+      playerValue: this.playerValue,
       actions: this.actions,
       status: this.status,
     };

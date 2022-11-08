@@ -41,12 +41,18 @@ export function useBlackjack() {
       makeRequest("getActiveBlackjackGame", [client.id]);
     }
   }, [client, makeRequest]);
+  const start = useCallback(() => {
+    if (client) {
+      makeRequest("startBlackjackGame", [50]);
+    }
+  }, [client, makeRequest]);
 
   return useMemo(
     () => ({
       game,
       load,
+      start,
     }),
-    [game, load]
+    [game, load, start]
   );
 }

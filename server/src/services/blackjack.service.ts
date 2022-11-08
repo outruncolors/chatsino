@@ -30,7 +30,7 @@ export class BlackjackService {
   }
 
   public async start(clientId: number, wager: number) {
-    const existingActiveGame = await this.load(clientId);
+    const { data: existingActiveGame } = await this.load(clientId);
 
     if (existingActiveGame) {
       throw new GameInProgressError();
@@ -45,19 +45,32 @@ export class BlackjackService {
       throw new CannotAffordWagerError();
     }
 
-    const game = new BlackjackGame();
+    try {
+      const game = new BlackjackGame();
 
-    game.deal();
+      game.deal();
 
-    const gameState = game.serialize();
+      const gameState = game.serialize();
 
-    await this.blackjackRepository.createBlackjackGame(
-      clientId,
-      wager,
-      gameState
-    );
+      const gameData = await this.blackjackRepository.createBlackjackGame(
+        clientId,
+        wager,
+        gameState
+      );
 
-    return gameState;
+      return gameData;
+    } catch (error) {
+      if (error instanceof Error) {
+        this.logger.error(
+          { error: error.message },
+          "Unable to start a blackjack game. Refunding client."
+        );
+
+        await this.clientRepository.payClient(clientId, wager);
+      }
+
+      throw error;
+    }
   }
 
   public async play(clientId: number, action: BlackjackAction) {
