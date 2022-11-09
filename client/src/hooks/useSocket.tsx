@@ -13,11 +13,26 @@ import { useClient } from "./useClient";
 
 type RequestArg = string | number | null;
 
+type Response = {
+  data?: unknown;
+  error?: string;
+};
+
+type SubscriberData = Record<string, (response: Response) => unknown>; // Message Kind -> Message Handler
+
+type SubscriberLookup = Record<string, SubscriberData>; // Subscriber Name -> Subscriber Data
+
 export interface SocketContextType {
   socket: null | WebSocket;
   initialized: boolean;
   initialize: () => void;
   makeRequest: (kind: string, args: RequestArg[]) => void;
+  subscribe: (
+    name: string,
+    kind: string,
+    onResponse: (response: Response) => unknown
+  ) => unknown;
+  unsubscribe: (name: string, kind?: string) => unknown;
 }
 
 const SocketContext = createContext<SocketContextType>({
@@ -25,6 +40,8 @@ const SocketContext = createContext<SocketContextType>({
   initialized: false,
   initialize() {},
   makeRequest() {},
+  subscribe() {},
+  unsubscribe() {},
 });
 
 export function SocketProvider({ children }: PropsWithChildren) {
@@ -33,6 +50,7 @@ export function SocketProvider({ children }: PropsWithChildren) {
   const socket = useRef<null | WebSocket>(null);
   const [initialized, setInitialized] = useState(false);
   const attemptingToReconnect = useRef<null | NodeJS.Timeout>(null);
+  const subscriberLookup = useRef<SubscriberLookup>({});
 
   const initialize = useCallback(async () => {
     try {
@@ -75,6 +93,12 @@ export function SocketProvider({ children }: PropsWithChildren) {
 
       socket.current.onmessage = function handleSocketMessage(event) {
         console.info("Received message.", event);
+
+        const { kind, data, error } = JSON.parse(event.data);
+
+        for (const subscriberData of Object.values(subscriberLookup.current)) {
+          subscriberData[kind]?.({ data, error });
+        }
       };
     } catch (error) {
       console.error("Unable to connect -- retrying soon.", error);
@@ -95,14 +119,41 @@ export function SocketProvider({ children }: PropsWithChildren) {
     [client]
   );
 
+  const subscribe = useCallback(
+    (
+      name: string,
+      kind: string,
+      onResponse: (response: Response) => unknown
+    ) => {
+      if (!subscriberLookup.current[name]) {
+        subscriberLookup.current[name] = {};
+      }
+
+      subscriberLookup.current[name][kind] = onResponse;
+    },
+    []
+  );
+
+  const unsubscribe = useCallback((name: string, kind?: string) => {
+    if (kind) {
+      if (subscriberLookup.current[name]) {
+        delete subscriberLookup.current[name][kind];
+      }
+    } else {
+      delete subscriberLookup.current[name];
+    }
+  }, []);
+
   const value = useMemo(
     () => ({
       socket: socket.current,
       initialized,
       initialize,
       makeRequest,
+      subscribe,
+      unsubscribe,
     }),
-    [initialized, initialize, makeRequest]
+    [initialized, initialize, makeRequest, subscribe, unsubscribe]
   );
 
   return (

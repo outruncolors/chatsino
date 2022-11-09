@@ -125,6 +125,7 @@ export class SocketController extends BaseSocketController {
       if (error instanceof InvalidArgumentsError) {
         return this.sendMessageTo(from.id, {
           kind,
+          args,
           error: `Invalid arguments provided to ${kind}.`,
         });
       }
