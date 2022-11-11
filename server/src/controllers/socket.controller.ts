@@ -1,4 +1,8 @@
-import { GameInProgressError } from "games";
+import {
+  BlackjackAction,
+  GameInProgressError,
+  NoGameInProgressError,
+} from "games";
 import { meetsPermissionRequirement } from "helpers";
 import { ClientPermissionLevel } from "repositories";
 import { BlackjackService, CannotAffordWagerError } from "services";
@@ -20,20 +24,16 @@ export class SocketController extends BaseSocketController {
     }
   > = {
     getActiveBlackjackGame: {
-      schema: yup
-        .object({
-          clientId: yup.number().required(),
-        })
-        .required(),
+      schema: GetActiveBlackjackGameSchema,
       handler: this.handleGetActiveBlackjackGame.bind(this),
     },
     startBlackjackGame: {
-      schema: yup
-        .object({
-          wager: yup.number().positive().required(),
-        })
-        .required(),
+      schema: StartBlackjackGameActionSchema,
       handler: this.handleStartBlackjackGame.bind(this),
+    },
+    takeBlackjackAction: {
+      schema: TakeBlackjackActionSchema,
+      handler: this.handleTakeBlackjackAction.bind(this),
     },
   };
 
@@ -82,7 +82,7 @@ export class SocketController extends BaseSocketController {
     args,
     from,
   }: SourcedSocketMessageSchema) {
-    this.logger.info({ kind, args, from }, "Handling getActiveBlackjackGame");
+    this.logger.info({ kind, args, from }, "Handling getActiveBlackjackGame()");
 
     const [clientId] = args as [number];
 
@@ -104,22 +104,26 @@ export class SocketController extends BaseSocketController {
     args,
     from,
   }: SourcedSocketMessageSchema) {
-    this.logger.info({ kind, args, from }, "Handling getActiveBlackjackGame");
+    this.logger.info({ kind, args, from }, "Handling startBlackjackGame()");
 
     const [wager] = args as [number];
 
     try {
-      await this.messageHandlers.startBlackjackGame.schema.validate({
-        wager,
-      });
-    } catch {
-      throw new InvalidArgumentsError();
-    }
+      try {
+        await this.messageHandlers.startBlackjackGame.schema.validate({
+          wager,
+        });
+      } catch {
+        throw new InvalidArgumentsError();
+      }
 
-    try {
+      await this.blackjackService.start(from.id, wager);
+
+      const { data } = await this.blackjackService.load(from.id);
+
       this.sendMessageTo(from.id, {
         kind,
-        data: await this.blackjackService.start(from.id, wager),
+        data,
       });
     } catch (error) {
       if (error instanceof InvalidArgumentsError) {
@@ -157,8 +161,85 @@ export class SocketController extends BaseSocketController {
       }
     }
   }
+
+  private async handleTakeBlackjackAction({
+    kind,
+    args,
+    from,
+  }: SourcedSocketMessageSchema) {
+    this.logger.info(
+      { kind, args, from },
+      "Handling handleTakeBlackjackAction()"
+    );
+
+    const [action] = args as [BlackjackAction];
+
+    try {
+      await this.messageHandlers.takeBlackjackAction.schema.validate({
+        action,
+      });
+    } catch {
+      throw new InvalidArgumentsError();
+    }
+
+    try {
+      this.sendMessageTo(from.id, {
+        kind,
+        data: await this.blackjackService.play(from.id, action),
+      });
+    } catch (error) {
+      if (error instanceof InvalidArgumentsError) {
+        return this.sendMessageTo(from.id, {
+          kind,
+          args,
+          error: `Invalid arguments provided to ${kind}.`,
+        });
+      }
+
+      if (error instanceof NoGameInProgressError) {
+        return this.sendMessageTo(from.id, {
+          kind,
+          args,
+          error: `${from.id} has no blackjack game in progress.`,
+        });
+      }
+
+      if (error instanceof Error) {
+        this.logger.error(
+          { error: error.message },
+          "Unable to takeBlackjackAction()"
+        );
+
+        return this.sendMessageTo(from.id, {
+          kind,
+          error: "An unknown error occurred.",
+        });
+      }
+    }
+  }
 }
 
 export class UnknownMessageKindError extends Error {}
 export class NotPermittedError extends Error {}
 export class InvalidArgumentsError extends Error {}
+
+export const GetActiveBlackjackGameSchema = yup
+  .object({
+    clientId: yup.number().required(),
+  })
+  .required();
+
+export const StartBlackjackGameActionSchema = yup
+  .object({
+    wager: yup.number().positive().required(),
+  })
+  .required();
+
+export const TakeBlackjackActionSchema = yup
+  .object({
+    action: yup
+      .string()
+      .oneOf<BlackjackAction>(["hit", "stay", "double-down", "buy-insurance"])
+      .required(),
+  })
+  .required();

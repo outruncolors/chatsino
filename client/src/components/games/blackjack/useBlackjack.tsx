@@ -46,21 +46,13 @@ export function useBlackjack() {
     }
   }, [client, makeRequest]);
 
-  const start = useCallback(() => {
-    if (client) {
-      makeRequest("startBlackjackGame", [50]);
-    }
-  }, [client, makeRequest]);
-
   const actions = useMemo(() => {
     const makeActionRequest = (action: BlackjackAction) => {
       makeRequest("takeBlackjackAction", [action]);
     };
 
     return {
-      deal: () => {
-        throw new CannotDealError();
-      },
+      deal: () => makeRequest("startBlackjackGame", [50]),
       hit: makeActionRequest.bind(null, "hit"),
       stay: makeActionRequest.bind(null, "stay"),
       "double-down": makeActionRequest.bind(null, "double-down"),
@@ -69,20 +61,26 @@ export function useBlackjack() {
   }, [makeRequest]);
 
   useEffect(() => {
-    subscribe(
-      BLACKJACK_SUBSCRIBER_NAME,
+    const actionKinds = [
       "getActiveBlackjackGame",
-      ({ data, error }) => {
+      "startBlackjackGame",
+      "takeBlackjackAction",
+    ];
+
+    for (const kind of actionKinds) {
+      subscribe(BLACKJACK_SUBSCRIBER_NAME, kind, ({ data, error }) => {
         if (error) {
           setError(error);
         } else if (data) {
           setGame(data as Blackjack);
         }
-      }
-    );
+      });
+    }
 
     return () => {
-      unsubscribe(BLACKJACK_SUBSCRIBER_NAME, "getActiveBlackjackGame");
+      for (const kind of actionKinds) {
+        unsubscribe(BLACKJACK_SUBSCRIBER_NAME, kind);
+      }
     };
   }, [subscribe, unsubscribe]);
 
@@ -91,11 +89,8 @@ export function useBlackjack() {
       game,
       error,
       load,
-      start,
       actions,
     }),
-    [game, error, load, start, actions]
+    [game, error, load, actions]
   );
 }
-
-class CannotDealError extends Error {}

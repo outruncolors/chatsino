@@ -128,6 +128,8 @@ export class BlackjackGame {
 
     if (this.status === "playing") {
       choices.push("hit", "stay");
+    } else {
+      choices.push("deal");
     }
 
     if (this.playerCanDoubleDown) {

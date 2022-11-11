@@ -5,7 +5,7 @@ import { useBlackjack } from "./useBlackjack";
 export function Blackjack() {
   const { client } = useClient();
   const { initialized } = useSocket();
-  const { game, load, start, actions } = useBlackjack();
+  const { game, load, actions } = useBlackjack();
   const hasLoaded = useRef(false);
 
   useEffect(() => {
@@ -30,7 +30,7 @@ export function Blackjack() {
           ))}
         </>
       ) : (
-        <button onClick={start}>Deal</button>
+        <button onClick={actions.deal}>Deal</button>
       )}
     </div>
   );

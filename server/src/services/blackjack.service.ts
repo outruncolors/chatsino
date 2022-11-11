@@ -98,6 +98,8 @@ export class BlackjackService {
           break;
       }
 
+      data.state = game.serialize();
+
       if (game.status !== "playing") {
         await this.payout(data);
       }
@@ -106,7 +108,7 @@ export class BlackjackService {
 
       await this.save(clientId, data);
 
-      return data.state;
+      return data;
     } catch (error) {
       if (error instanceof GameInProgressError) {
         this.logger.info({ clientId }, "Client has a game in progress.");
