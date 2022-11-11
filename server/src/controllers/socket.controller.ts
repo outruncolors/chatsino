@@ -109,31 +109,25 @@ export class SocketController extends BaseSocketController {
     const [wager] = args as [number];
 
     try {
-      try {
-        await this.messageHandlers.startBlackjackGame.schema.validate({
-          wager,
-        });
-      } catch {
-        throw new InvalidArgumentsError();
-      }
-
-      await this.blackjackService.start(from.id, wager);
-
-      const { data } = await this.blackjackService.load(from.id);
-
-      this.sendMessageTo(from.id, {
-        kind,
-        data,
+      await this.messageHandlers.startBlackjackGame.schema.validate({
+        wager,
       });
-    } catch (error) {
-      if (error instanceof InvalidArgumentsError) {
-        return this.sendMessageTo(from.id, {
-          kind,
-          args,
-          error: `Invalid arguments provided to ${kind}.`,
-        });
-      }
+    } catch {
+      throw new InvalidArgumentsError();
+    }
 
+    await this.blackjackService.start(from.id, wager);
+
+    try {
+      const succeeded = await this.attempt({ kind, args, from }, async () =>
+        this.sendMessageTo(from.id, {
+          kind,
+          data: (await this.blackjackService.load(from.id)).data,
+        })
+      );
+
+      this.logger.info({ succeeded }, "Handled.");
+    } catch (error) {
       if (error instanceof CannotAffordWagerError) {
         return this.sendMessageTo(from.id, {
           kind,
@@ -141,19 +135,7 @@ export class SocketController extends BaseSocketController {
         });
       }
 
-      if (error instanceof GameInProgressError) {
-        return this.sendMessageTo(from.id, {
-          kind,
-          error: "You already have a game of blackjack in progress.",
-        });
-      }
-
       if (error instanceof Error) {
-        this.logger.error(
-          { error: error.message },
-          "Unable to startBlackjackGame()"
-        );
-
         return this.sendMessageTo(from.id, {
           kind,
           error: "An unknown error occurred.",
@@ -182,38 +164,48 @@ export class SocketController extends BaseSocketController {
       throw new InvalidArgumentsError();
     }
 
-    try {
+    const succeeded = await this.attempt({ kind, args, from }, async () =>
       this.sendMessageTo(from.id, {
         kind,
         data: await this.blackjackService.play(from.id, action),
-      });
+      })
+    );
+
+    this.logger.info({ succeeded }, "Handled.");
+  }
+
+  private async attempt(
+    { kind, args, from }: SourcedSocketMessageSchema,
+    fn: () => Promise<unknown>
+  ) {
+    try {
+      await fn();
+      return true;
     } catch (error) {
       if (error instanceof InvalidArgumentsError) {
-        return this.sendMessageTo(from.id, {
+        this.sendMessageTo(from.id, {
           kind,
           args,
           error: `Invalid arguments provided to ${kind}.`,
         });
+
+        return false;
       }
 
       if (error instanceof NoGameInProgressError) {
-        return this.sendMessageTo(from.id, {
+        this.sendMessageTo(from.id, {
           kind,
           args,
-          error: `${from.id} has no blackjack game in progress.`,
+          error: `${from.id} has no game in progress.`,
         });
+
+        return false;
       }
 
       if (error instanceof Error) {
-        this.logger.error(
-          { error: error.message },
-          "Unable to takeBlackjackAction()"
-        );
+        this.logger.error({ error: error.message }, "Failed attempt.");
 
-        return this.sendMessageTo(from.id, {
-          kind,
-          error: "An unknown error occurred.",
-        });
+        throw error;
       }
     }
   }
