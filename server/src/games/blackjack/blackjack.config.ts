@@ -1,1 +1,1 @@
-export const DECK_COUNT = 4;
+export const BLACKJACK_DECK_COUNT = 4;

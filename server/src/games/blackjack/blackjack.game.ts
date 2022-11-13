@@ -8,6 +8,8 @@ const config = {
   ...gameConfig,
 };
 
+const CHANCE = new Chance();
+
 export type FinishedBlackjackStatus = "pushed" | "won" | "lost" | "blackjack";
 
 export type BlackjackStatus = FinishedBlackjackStatus | "waiting" | "playing";
@@ -30,8 +32,6 @@ export type BlackjackState = {
   actions: BlackjackAction[];
   status: BlackjackStatus;
 };
-
-const CHANCE = new Chance();
 
 export class BlackjackGame {
   public static getCardValue(card: string) {
@@ -116,7 +116,8 @@ export class BlackjackGame {
         return prev;
       }, {} as Record<string, number>);
     const cardsRemaining = deck.reduce((prev, next) => {
-      const amount = config.DECK_COUNT - (cardsAlreadyDealt[next] ?? 0);
+      const amount =
+        config.BLACKJACK_DECK_COUNT - (cardsAlreadyDealt[next] ?? 0);
       return prev.concat(Array.from({ length: amount }, () => next));
     }, [] as string[]);
 
