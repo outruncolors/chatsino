@@ -1,6 +1,10 @@
 import { ChatsinoLogger } from "logging";
 import { AdminService, AuthenticationService } from "services";
-import { BlackjackRepository, ClientRepository } from "repositories";
+import {
+  BlackjackRepository,
+  ClientRepository,
+  RouletteRepository,
+} from "repositories";
 
 const DEFAULT_PASSWORD = "password";
 const DEFAULT_TOKEN_BALANCE = 9999;
@@ -9,6 +13,7 @@ const logger = new ChatsinoLogger("Script/Seed");
 const adminService = new AdminService();
 const authenticationService = new AuthenticationService();
 const blackjackRepository = new BlackjackRepository();
+const rouletteRepository = new RouletteRepository();
 const clientRepository = new ClientRepository();
 
 export async function seed() {
@@ -23,11 +28,13 @@ export async function seed() {
 
 async function destroyRepositories() {
   await blackjackRepository.destroy();
+  await rouletteRepository.destroy();
   await clientRepository.destroy();
 }
 
 async function createRepositories() {
   await clientRepository.create();
+  await rouletteRepository.create();
   await blackjackRepository.create();
 }
 

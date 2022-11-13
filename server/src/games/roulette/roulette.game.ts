@@ -50,6 +50,7 @@ export class RouletteGame {
   };
 
   private startedAt: RouletteState["startedAt"] = null;
+  private result: RouletteState["result"] = null;
 
   private get endsAt() {
     if (!this.startedAt) {
@@ -74,8 +75,6 @@ export class RouletteGame {
 
     return this.spinningAt + config.SPINNING_DURATION;
   }
-
-  private result: RouletteState["result"] = null;
 
   private get resultLine() {
     if (!this.result) {
