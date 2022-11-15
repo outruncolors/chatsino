@@ -750,6 +750,11 @@
   resolved "https://registry.yarnpkg.com/@types/mocha/-/mocha-10.0.0.tgz#3d9018c575f0e3f7386c1de80ee66cc21fbb7a52"
   integrity sha512-rADY+HtTOA52l9VZWtgQfn4p+UDVM2eDVkMZT1I6syp0YKxW2F9v+0pbRZLsvskhQv/vMb6ZfCay81GHbz5SHg==
 
+"@types/node-cron@^3.0.6":
+  version "3.0.6"
+  resolved "https://registry.yarnpkg.com/@types/node-cron/-/node-cron-3.0.6.tgz#689d9db9a9b4fabd5a0137fe9cb927f81955b1af"
+  integrity sha512-Qu9dpjkgj2JmzRmDMVzpt2dFKuJ7wma0mxEvbbgomwkhAdHKT2LpSLYHawzd9OeeP4HsyhmcV9o/xLgJyPNcgw==
+
 "@types/node@*", "@types/node@^18.11.7":
   version "18.11.7"
   resolved "https://registry.yarnpkg.com/@types/node/-/node-18.11.7.tgz#8ccef136f240770c1379d50100796a6952f01f94"
@@ -2560,6 +2565,13 @@ negotiator@0.6.3:
   resolved "https://registry.yarnpkg.com/negotiator/-/negotiator-0.6.3.tgz#58e323a72fedc0d6f9cd4d31fe49f51479590ccd"
   integrity sha512-+EUsqGPLsM+j/zdChZjsnX51g4XrHFOIXwfnCVPGlQk/k5giakcKsuxCObBRu6DSm9opw/O6slWbJdghQM4bBg==
 
+node-cron@^3.0.2:
+  version "3.0.2"
+  resolved "https://registry.yarnpkg.com/node-cron/-/node-cron-3.0.2.tgz#bb0681342bd2dfb568f28e464031280e7f06bd01"
+  integrity sha512-iP8l0yGlNpE0e6q1o185yOApANRe47UPbLf4YxfbiNHt/RU5eBcGB/e0oudruheSf+LQeDMezqC5BVAb5wwRcQ==
+  dependencies:
+    uuid "8.3.2"
+
 node-gyp-build@^4.3.0:
   version "4.5.0"
   resolved "https://registry.yarnpkg.com/node-gyp-build/-/node-gyp-build-4.5.0.tgz#7a64eefa0b21112f89f58379da128ac177f20e40"
@@ -3350,6 +3362,11 @@ uuid4@^2.0.3:
   version "2.0.3"
   resolved "https://registry.yarnpkg.com/uuid4/-/uuid4-2.0.3.tgz#241e5dfe1704a79c52e2aa40e7e581a5e7b01ab4"
   integrity sha512-CTpAkEVXMNJl2ojgtpLXHgz23dh8z81u6/HEPiQFOvBc/c2pde6TVHmH4uwY0d/GLF3tb7+VDAj4+2eJaQSdZQ==
+
+uuid@8.3.2:
+  version "8.3.2"
+  resolved "https://registry.yarnpkg.com/uuid/-/uuid-8.3.2.tgz#80d5b5ced271bb9af6c445f21a1a04c606cefbe2"
+  integrity sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg==
 
 v8-to-istanbul@^9.0.1:
   version "9.0.1"

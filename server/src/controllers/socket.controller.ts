@@ -1,11 +1,8 @@
-import {
-  BlackjackAction,
-  GameInProgressError,
-  NoGameInProgressError,
-} from "games";
-import { meetsPermissionRequirement } from "helpers";
+import { BlackjackAction, NoGameInProgressError } from "games";
+import { CannotAffordWagerError, meetsPermissionRequirement } from "helpers";
 import { ClientPermissionLevel } from "repositories";
-import { BlackjackService, CannotAffordWagerError } from "services";
+import { BlackjackService } from "services";
+import { RouletteService } from "services/roulette.service";
 import { SourcedSocketMessageSchema, sourcedSocketMessageSchema } from "shared";
 import { WebSocketServer } from "ws";
 import * as yup from "yup";
@@ -14,6 +11,7 @@ import { BaseSocketController, subscriber } from "./socket.controller.base";
 
 export class SocketController extends BaseSocketController {
   private blackjackService = new BlackjackService();
+  private rouletteService = new RouletteService();
 
   public messageHandlers: Record<
     string,
@@ -41,6 +39,8 @@ export class SocketController extends BaseSocketController {
     super(wss);
 
     subscriber.subscribe("client-message", this.handleSubscribedMessage);
+
+    this.rouletteService.start();
   }
 
   private handleSubscribedMessage = async (messageString: string) => {

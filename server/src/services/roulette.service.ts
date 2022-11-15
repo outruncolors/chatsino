@@ -1,3 +1,4 @@
+import { schedule } from "node-cron";
 import {
   GameInProgressError,
   NoGameInProgressError,
@@ -9,6 +10,7 @@ import {
   CannotPayoutError,
   CannotAffordWagerError,
   DifferentClientError,
+  now,
 } from "helpers";
 import { ClientRepository, Roulette, RouletteRepository } from "repositories";
 
@@ -30,20 +32,31 @@ export class RouletteService {
     };
   }
 
-  public async start() {
-    const { data: existingActiveGame } = await this.load();
+  public async start(): Promise<void> {
+    const { data: existingActiveGame, game } = await this.load();
 
-    if (existingActiveGame) {
-      throw new GameInProgressError();
+    if (!existingActiveGame || !game) {
+      this.logger.info("No active roulette game detected. Starting a new one.");
+      await this.createNewGame();
+      return this.start();
     }
 
-    const game = new RouletteGame();
+    const currentTime = now();
+    const endsAt = game.endsAt!;
+    const secondsLeft = endsAt - currentTime;
 
-    game.startTakingBets();
+    if (secondsLeft <= 0) {
+      this.logger.info(
+        { overForSeconds: Math.abs(secondsLeft) },
+        "Existing game should already be over."
+      );
+    } else {
+      this.logger.info({ secondsLeft }, "Taking bets.");
 
-    const gameState = game.serialize();
-
-    return this.rouletteRepository.createRouletteGame(gameState);
+      setTimeout(() => {
+        this.logger.info("Spinning.");
+      }, secondsLeft * 1000);
+    }
   }
 
   public async play(clientId: number, bet: RouletteBet) {
@@ -126,6 +139,16 @@ export class RouletteService {
 
       throw error;
     }
+  }
+
+  private async createNewGame() {
+    const game = new RouletteGame();
+
+    game.startTakingBets();
+
+    const gameState = game.serialize();
+
+    return this.rouletteRepository.createRouletteGame(gameState);
   }
 }
 
