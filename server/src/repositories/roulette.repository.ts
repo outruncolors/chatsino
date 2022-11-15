@@ -37,12 +37,10 @@ export class RouletteRepository extends BaseRepository {
     return game || null;
   }
 
-  public async setActiveRouletteGame(state: RouletteState) {
+  public async setActiveRouletteGame(game: Partial<Roulette>) {
     this.logger.info("Updating active roulette game.");
 
-    await database<Roulette>("roulette")
-      .where("active", true)
-      .update({ state });
+    await database<Roulette>("roulette").where("active", true).update(game);
   }
 
   public async createRouletteGame(state: RouletteState) {

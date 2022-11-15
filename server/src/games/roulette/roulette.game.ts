@@ -12,10 +12,11 @@ const config = {
 const CHANCE = new Chance();
 
 export type RouletteBet = {
-  clientId: string;
+  clientId: number;
   kind: RouletteBetKind;
   which: unknown;
   wager: number;
+  placedAt: number;
 };
 
 export type RouletteStatus =
@@ -118,7 +119,7 @@ export class RouletteGame {
     return null;
   }
 
-  private get winners() {
+  public get winners() {
     const handlers: Record<RouletteBetKind, (bet: RouletteBet) => boolean> = {
       "straight-up": this.checkStraightUpBet,
       line: this.checkLineBet,
@@ -181,6 +182,10 @@ export class RouletteGame {
   public startTakingBets() {
     this.ensureWaiting();
     this.startedAt = now();
+  }
+
+  public takeBet(bet: RouletteBet) {
+    this.bets[bet.kind].push(bet);
   }
 
   public spin() {

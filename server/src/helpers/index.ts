@@ -1,4 +1,5 @@
 export * from "./encryption";
+export * from "./errors";
 export * from "./permissions";
 export * from "./requests";
 export * from "./generators";

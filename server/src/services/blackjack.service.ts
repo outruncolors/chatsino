@@ -7,6 +7,7 @@ import {
   CannotTakeActionError,
 } from "games";
 import { ChatsinoLogger } from "logging";
+import { CannotPayoutError, CannotAffordWagerError } from "helpers";
 import { Blackjack, BlackjackRepository, ClientRepository } from "repositories";
 
 export class BlackjackService {
@@ -183,6 +184,3 @@ export class BlackjackService {
     gameData.active = false;
   }
 }
-
-export class CannotAffordWagerError extends Error {}
-export class CannotPayoutError extends Error {}
