@@ -1,4 +1,4 @@
-export * from "./admin-2";
+export * from "./admin";
 export * from "./chat";
 export * from "./games";
 export * from "./Chatsino";

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuthentication, useClient, useSocket } from "hooks";
-import { Admin } from "./admin-2";
+import { Admin } from "./admin";
 import { Chat } from "./chat";
 import { Game } from "./games";
 
