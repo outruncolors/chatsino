@@ -35,7 +35,7 @@ export type RouletteState = {
   finishedAt: MaybeTimeInSeconds;
   status: RouletteStatus;
   bets: Record<RouletteBetKind, RouletteBet[]>;
-  winners: null | Record<string, number>; // clientId -> ChipWinnings
+  winners: null | Record<string, number>;
   result: null | number;
 };
 
@@ -53,7 +53,7 @@ export class RouletteGame {
   private startedAt: RouletteState["startedAt"] = null;
   private result: RouletteState["result"] = null;
 
-  private get endsAt() {
+  public get endsAt() {
     if (!this.startedAt) {
       return null;
     }
@@ -61,7 +61,7 @@ export class RouletteGame {
     return this.startedAt + config.TAKING_BETS_DURATION;
   }
 
-  private get spinningAt() {
+  public get spinningAt() {
     if (!this.endsAt) {
       return null;
     }
@@ -69,7 +69,7 @@ export class RouletteGame {
     return this.endsAt + config.NO_MORE_BETS_DURATION;
   }
 
-  private get finishedAt() {
+  public get finishedAt() {
     if (!this.spinningAt) {
       return null;
     }
