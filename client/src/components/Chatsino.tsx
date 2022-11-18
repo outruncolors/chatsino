@@ -39,10 +39,10 @@ export function Chatsino() {
       {entered && (
         <>
           <Chat /> <br />
-          <Game />
+          <Game /> <br />
+          {isAdmin && <Admin />}
         </>
       )}
-      {isAdmin && <Admin />}
     </div>
   );
 }

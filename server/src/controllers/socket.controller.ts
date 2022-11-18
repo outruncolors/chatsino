@@ -21,6 +21,10 @@ export class SocketController extends BaseSocketController {
       requirement?: ClientPermissionLevel;
     }
   > = {
+    sendChatMessage: {
+      schema: SendChatMessageSchema,
+      handler: this.handleSendChatMessage.bind(this),
+    },
     getActiveBlackjackGame: {
       schema: GetActiveBlackjackGameSchema,
       handler: this.handleGetActiveBlackjackGame.bind(this),
@@ -76,6 +80,27 @@ export class SocketController extends BaseSocketController {
       }
     }
   };
+
+  private async handleSendChatMessage({
+    kind,
+    args,
+    from,
+  }: SourcedSocketMessageSchema) {
+    this.logger.info({ kind, args, from }, "Handling sendChatMessage()");
+
+    const [message, room] = args as [string, string];
+
+    try {
+      await this.messageHandlers.sendChatMessage.schema.validate({
+        message,
+        room,
+      });
+    } catch {
+      throw new InvalidArgumentsError();
+    }
+
+    // Handle it.
+  }
 
   private async handleGetActiveBlackjackGame({
     kind,
@@ -214,6 +239,13 @@ export class SocketController extends BaseSocketController {
 export class UnknownMessageKindError extends Error {}
 export class NotPermittedError extends Error {}
 export class InvalidArgumentsError extends Error {}
+
+export const SendChatMessageSchema = yup
+  .object({
+    message: yup.string().min(1).required(),
+    room: yup.string().required(),
+  })
+  .required();
 
 export const GetActiveBlackjackGameSchema = yup
   .object({
