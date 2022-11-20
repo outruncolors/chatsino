@@ -43,14 +43,14 @@ export interface ClientSignupSchema
   extends yup.InferType<typeof clientSignupSchema> {}
 
 export const adminPaySchema = yup.object({
-  clientId: yup.string().required(),
+  clientId: yup.number().required(),
   amount: yup.number().positive().min(1).required(),
 });
 
 export interface AdminPaySchema extends yup.InferType<typeof adminPaySchema> {}
 
 export const adminChangePermissionSchema = yup.object({
-  clientId: yup.string().required(),
+  clientId: yup.number().required(),
   permissionLevel: yup.string().oneOf(PERMISSION_RANKING),
 });
 

@@ -1,12 +1,16 @@
 import { now } from "helpers";
 import { ChatsinoLogger } from "logging";
 
-export interface ChatMessage {
-  author: string;
+export interface ChatMessageConfig {
+  from: number;
   content: string;
-  createdAt: number;
-  editedAt: number;
   sentTo: string[];
+}
+
+export interface ChatMessage extends ChatMessageConfig {
+  createdAt: number;
+  createdBy: number;
+  updatedAt: number;
 }
 
 export interface ChatroomConfig {
@@ -17,11 +21,11 @@ export interface ChatroomConfig {
 }
 
 export interface Chatroom extends ChatroomConfig {
-  clients: string[];
+  clients: number[];
   messages: ChatMessage[];
-  createdBy?: string;
+  createdBy?: number;
   createdAt?: number;
-  updatedBy?: string;
+  updatedBy?: number;
   updatedAt?: number;
 }
 
@@ -68,11 +72,26 @@ const DEFAULT_CHATROOMS: ChatroomDirectory = {
   },
 };
 
-export class ChatService {
+export class ChatroomService {
   private logger = new ChatsinoLogger(this.constructor.name);
   private chatrooms: ChatroomDirectory = DEFAULT_CHATROOMS;
 
-  public joinChatroom = (clientId: string, room: string) => {
+  public getChatroom = (title: string) => {
+    const chatroom = this.chatrooms[title];
+
+    if (!chatroom) {
+      throw new NonexistentChatroomError();
+    }
+
+    return chatroom;
+  };
+
+  public listPublicChatrooms = () =>
+    Object.values(this.chatrooms).filter((chatroom) =>
+      Object.keys(DEFAULT_CHATROOMS).includes(chatroom.title)
+    );
+
+  public joinChatroom = (clientId: number, room: string) => {
     if (!this.clientCanJoinChatroom(clientId, room)) {
       throw new NotAllowedInChatroomError();
     }
@@ -86,7 +105,7 @@ export class ChatService {
     this.logger.info({ clientId, room }, "Client joined a chatroom.");
   };
 
-  public leaveAllChatrooms = (clientId: string) => {
+  public leaveAllChatrooms = (clientId: number) => {
     this.logger.info({ clientId }, "Client left all chatrooms.");
 
     for (const chatroom of Object.values(this.chatrooms)) {
@@ -94,9 +113,26 @@ export class ChatService {
     }
   };
 
+  public sendMessageToChatroom = (message: ChatMessageConfig) => {
+    for (const chatroomTitle of message.sentTo) {
+      const chatroom = this.getChatroom(chatroomTitle);
+
+      if (!this.clientCanJoinChatroom(message.from, chatroomTitle)) {
+        throw new NotAllowedInChatroomError();
+      }
+
+      chatroom.messages.push({
+        ...message,
+        createdBy: message.from,
+        createdAt: now(),
+        updatedAt: now(),
+      });
+    }
+  };
+
   // #region Private Chatrooms
   public createPrivateChatroom = (
-    creatorId: string,
+    creatorId: number,
     roomConfig: ChatroomConfig
   ) => {
     if (this.getClientPrivateChatroom(creatorId)) {
@@ -118,8 +154,6 @@ export class ChatService {
       updatedBy: creatorId,
       updatedAt: now(),
     };
-
-    this.joinChatroom(creatorId, roomConfig.title);
   };
 
   public listPrivateChatrooms = () =>
@@ -128,7 +162,7 @@ export class ChatService {
     );
 
   public updatePrivateChatroom = (
-    updaterId: string,
+    updaterId: number,
     chatroomTitle: string,
     roomConfig: ChatroomConfig
   ) => {
@@ -149,7 +183,7 @@ export class ChatService {
     );
   };
 
-  public deletePrivateChatroom = (deleterId: string, chatroomTitle: string) => {
+  public deletePrivateChatroom = (deleterId: number, chatroomTitle: string) => {
     if (!this.getChatroom(chatroomTitle)) {
       throw new NoChatroomFoundError();
     }
@@ -167,29 +201,7 @@ export class ChatService {
   };
   // #endregion
 
-  // send
-
-  // edit
-
-  // delete
-
-  // more
-  private getChatroom = (title: string) => {
-    const chatroom = this.chatrooms[title];
-
-    if (!chatroom) {
-      throw new NonexistentChatroomError();
-    }
-
-    return chatroom;
-  };
-
-  private getClientPrivateChatroom = (clientId: string) =>
-    Object.values(this.chatrooms).find(
-      (chatroom) => chatroom.createdBy === clientId
-    );
-
-  private clientCanJoinChatroom = (clientId: string, room: string) => {
+  private clientCanJoinChatroom = (clientId: number, room: string) => {
     const chatroom = this.getChatroom(room);
     const { blacklist, whitelist } = chatroom;
 
@@ -201,6 +213,11 @@ export class ChatService {
       return true;
     }
   };
+
+  public getClientPrivateChatroom = (clientId: number) =>
+    Object.values(this.chatrooms).find(
+      (chatroom) => chatroom.createdBy === clientId
+    );
 }
 
 export class NonexistentChatroomError extends Error {}

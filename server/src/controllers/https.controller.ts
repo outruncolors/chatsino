@@ -2,7 +2,7 @@ import { Request } from "express";
 import { Server } from "https";
 import { Duplex } from "stream";
 import { ChatsinoLogger } from "logging";
-import { SocketController } from "./socket.controller";
+import { SocketController } from "./sockets";
 import * as config from "config";
 
 export class HttpsController {
