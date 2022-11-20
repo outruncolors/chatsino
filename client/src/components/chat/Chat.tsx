@@ -12,7 +12,11 @@ export function Chat() {
       event.preventDefault();
 
       if (message) {
-        makeRequest("sendChatMessage", [message, "Lobby"]);
+        makeRequest("sendChatMessage", {
+          message,
+          room: "Lobby",
+        });
+
         setMessage("");
       }
     },

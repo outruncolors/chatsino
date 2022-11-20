@@ -42,17 +42,24 @@ export function useBlackjack() {
 
   const load = useCallback(() => {
     if (client) {
-      makeRequest("getActiveBlackjackGame", [client.id]);
+      makeRequest("getActiveBlackjackGame", {
+        clientId: client.id,
+      });
     }
   }, [client, makeRequest]);
 
   const actions = useMemo(() => {
     const makeActionRequest = (action: BlackjackAction) => {
-      makeRequest("takeBlackjackAction", [action]);
+      makeRequest("takeBlackjackAction", {
+        action,
+      });
     };
 
     return {
-      deal: () => makeRequest("startBlackjackGame", [50]),
+      deal: () =>
+        makeRequest("startBlackjackGame", {
+          wager: 50,
+        }),
       hit: makeActionRequest.bind(null, "hit"),
       stay: makeActionRequest.bind(null, "stay"),
       "double-down": makeActionRequest.bind(null, "double-down"),

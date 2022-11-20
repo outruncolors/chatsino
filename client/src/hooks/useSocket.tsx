@@ -11,8 +11,6 @@ import * as config from "config";
 import { useAuthentication } from "./useAuthentication";
 import { useClient } from "./useClient";
 
-type RequestArg = string | number | null;
-
 type Response = {
   data?: unknown;
   error?: string;
@@ -26,7 +24,7 @@ export interface SocketContextType {
   socket: null | WebSocket;
   initialized: boolean;
   initialize: () => void;
-  makeRequest: (kind: string, args: RequestArg[]) => void;
+  makeRequest: (kind: string, args: Record<string, unknown>) => void;
   subscribe: (
     name: string,
     kind: string,
@@ -106,7 +104,7 @@ export function SocketProvider({ children }: PropsWithChildren) {
   }, [requestTicket]);
 
   const makeRequest = useCallback(
-    (kind: string, args: RequestArg[] = []) => {
+    (kind: string, args: Record<string, unknown> = {}) => {
       if (client) {
         const request = {
           kind,

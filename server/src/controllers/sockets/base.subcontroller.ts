@@ -46,7 +46,7 @@ export const SubcontrollerResponseSchema = yup.object({
 
 export const SubcontrollerSuccessResponseSchema =
   SubcontrollerResponseSchema.shape({
-    data: yup.object().nullable().required(),
+    data: yup.object().nullable(),
   });
 
 export const SubcontrollerErrorResponseSchema =
