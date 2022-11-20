@@ -91,12 +91,41 @@ export class BlackjackService {
         case "stay":
           game.stay();
           break;
-        case "double-down":
+        case "double-down": {
+          if (!game.playerCanDoubleDown) {
+            throw new CannotTakeActionError();
+          }
+
+          const charged = await this.clientRepository.chargeClient(
+            clientId,
+            data.wager
+          );
+
+          if (!charged) {
+            throw new CannotTakeActionError();
+          }
+
           game.doubleDown();
           break;
-        case "buy-insurance":
+        }
+        case "buy-insurance": {
+          if (!game.playerCanPurchaseInsurance) {
+            throw new CannotTakeActionError();
+          }
+
+          const price = Math.floor(data.wager / 2);
+          const charged = await this.clientRepository.chargeClient(
+            clientId,
+            price
+          );
+
+          if (!charged) {
+            throw new CannotTakeActionError();
+          }
+
           game.buyInsurance();
           break;
+        }
       }
 
       data.state = game.serialize();

@@ -9,11 +9,13 @@ import { socketMessageSchema } from "shared";
 import { Duplex } from "stream";
 import { RawData, WebSocket, WebSocketServer } from "ws";
 
-export const subscriber = createClient();
-export const publisher = createClient();
+export const CLIENT_MESSAGE_CHANNEL = "client-message";
 
-subscriber.connect();
+export const publisher = createClient();
 publisher.connect();
+
+export const subscriber = createClient();
+subscriber.connect();
 
 export class BaseSocketController {
   public logger = new ChatsinoLogger(this.constructor.name);
@@ -204,7 +206,7 @@ export class BaseSocketController {
         from: this.socketToClientMap.get(ws),
       };
 
-      publisher.publish("client-message", JSON.stringify(sourcedMessage));
+      publisher.publish(CLIENT_MESSAGE_CHANNEL, JSON.stringify(sourcedMessage));
     } catch (error) {
       if (error instanceof Error) {
         this.logger.error(

@@ -61,15 +61,15 @@ export interface AdminChangePermissionSchema
 
 export const socketMessageSchema = yup.object({
   kind: yup.string().required(),
-  args: yup.array(),
+  args: yup.object().optional().default({}),
 });
 
-export type RequestArg = string | number | null;
-
-export interface SocketMessageSchema
-  extends yup.InferType<typeof socketMessageSchema> {
-  args: RequestArg[];
-}
+export type SocketMessageSchema = Omit<
+  yup.InferType<typeof socketMessageSchema>,
+  "args"
+> & {
+  args: Record<string, unknown>;
+};
 
 export const authenticatedClientSchema = yup.object({
   id: yup.number().required(),
