@@ -1,26 +1,22 @@
-import { useSocket } from "hooks";
 import { ChangeEvent, FormEvent, useCallback, useState } from "react";
+import { useChat } from "./useChat";
 
 export function Chat() {
-  const [message, setMessage] = useState("");
-  const { makeRequest } = useSocket();
+  const [messageDraft, setMessageDraft] = useState("");
+  const { sendChatMessage } = useChat();
   const handleChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
-    setMessage(event.target.value);
+    setMessageDraft(event.target.value);
   }, []);
   const handleSubmit = useCallback(
     (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
 
-      if (message) {
-        makeRequest("sendChatMessage", {
-          message,
-          room: "Lobby",
-        });
-
-        setMessage("");
+      if (messageDraft) {
+        sendChatMessage(messageDraft);
+        setMessageDraft("");
       }
     },
-    [message, makeRequest]
+    [messageDraft, sendChatMessage]
   );
 
   return (
@@ -28,7 +24,7 @@ export function Chat() {
       <h1>Chat</h1>
       <hr />
       <form onSubmit={handleSubmit}>
-        <input type="text" value={message} onChange={handleChange} />
+        <input type="text" value={messageDraft} onChange={handleChange} />
         <button>Send</button>
       </form>
     </div>

@@ -34,6 +34,12 @@ export interface Blackjack {
 
 export const BLACKJACK_SUBSCRIBER_NAME = "blackjack";
 
+export enum BlackjackSocketMessages {
+  GetActiveBlackjackGame = "getActiveBlackjackGame",
+  StartBlackjackGame = "startBlackjackGame",
+  TakeBlackjackAction = "takeBlackjackAction",
+}
+
 export function useBlackjack() {
   const { client } = useClient();
   const { makeRequest, subscribe, unsubscribe } = useSocket();
@@ -42,7 +48,7 @@ export function useBlackjack() {
 
   const load = useCallback(() => {
     if (client) {
-      makeRequest("getActiveBlackjackGame", {
+      makeRequest(BlackjackSocketMessages.GetActiveBlackjackGame, {
         clientId: client.id,
       });
     }
@@ -50,14 +56,14 @@ export function useBlackjack() {
 
   const actions = useMemo(() => {
     const makeActionRequest = (action: BlackjackAction) => {
-      makeRequest("takeBlackjackAction", {
+      makeRequest(BlackjackSocketMessages.TakeBlackjackAction, {
         action,
       });
     };
 
     return {
       deal: () =>
-        makeRequest("startBlackjackGame", {
+        makeRequest(BlackjackSocketMessages.StartBlackjackGame, {
           wager: 50,
         }),
       hit: makeActionRequest.bind(null, "hit"),
@@ -69,9 +75,9 @@ export function useBlackjack() {
 
   useEffect(() => {
     const actionKinds = [
-      "getActiveBlackjackGame",
-      "startBlackjackGame",
-      "takeBlackjackAction",
+      BlackjackSocketMessages.GetActiveBlackjackGame,
+      BlackjackSocketMessages.StartBlackjackGame,
+      BlackjackSocketMessages.TakeBlackjackAction,
     ];
 
     for (const kind of actionKinds) {
