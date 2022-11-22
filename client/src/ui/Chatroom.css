@@ -1,0 +1,65 @@
+:root {
+  /* Colors */
+  --black: #000;
+  --grey-100: #111;
+  --grey-100-5: #111111cc;
+  --grey-100-75: #11111199;
+  --grey-300: #666;
+  --grey-500: #999;
+  --grey-700: #bbb;
+  --grey-900: #eee;
+  --white: #fff;
+
+  /* Spacing */
+  --spacing-1: 0.5rem;
+  --spacing-2: 1rem;
+  --spacing-3: 1.5rem;
+  --spacing-4: 2rem;
+  --spacing-5: 5rem;
+
+  /* Other */
+  --border-radius: 6px;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  padding: 0;
+}
+
+html {
+  background: url(../assets/felt.webp) no-repeat center center fixed;
+  -webkit-background-size: cover;
+  -moz-background-size: cover;
+  -o-background-size: cover;
+  background-size: cover;
+}
+
+body {
+  color: var(--grey-900);
+  padding: var(--spacing-2) !important;
+}
+
+.Chatroom {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: none !important;
+}
+
+.Chatroom_Content {
+  margin: var(--spacing-2);
+  padding: var(--spacing-2);
+  background: var(--grey-100-75);
+  border-radius: var(--border-radius);
+}
+
+.Chatroom_Footer {
+  padding: var(--spacing-2) !important;
+  background: var(--grey-100-5) !important;
+  border-top: 1px solid var(--black);
+}
