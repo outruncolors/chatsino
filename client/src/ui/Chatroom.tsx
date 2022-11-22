@@ -1,5 +1,6 @@
-import { PropsWithChildren } from "react";
-import { ConfigProvider, Layout, theme } from "antd";
+import { PropsWithChildren, useState } from "react";
+import { ConfigProvider, FloatButton, Layout, theme } from "antd";
+import { SendOutlined } from "@ant-design/icons";
 import "antd/dist/reset.css";
 import "./Chatroom.css";
 
@@ -8,10 +9,27 @@ export function Chatroom() {
     <AntdConfig>
       <Layout className="Chatroom">
         <Layout.Content className="Chatroom_Content">Content</Layout.Content>
-        <Layout.Footer className="Chatroom_Footer">Footer</Layout.Footer>
       </Layout>
+
+      <FloatButton
+        className="Chatroom_FloatButton"
+        icon={<SendOutlined />}
+        type="primary"
+        shape="square"
+      />
     </AntdConfig>
   );
+}
+
+export function useChatroom() {
+  const [draft, setDraft] = useState("");
+  const clear = () => setDraft("");
+
+  return {
+    draft,
+    setDraft,
+    clear,
+  };
 }
 
 function AntdConfig(props: PropsWithChildren) {

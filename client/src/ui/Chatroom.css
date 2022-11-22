@@ -58,8 +58,7 @@ body {
   border-radius: var(--border-radius);
 }
 
-.Chatroom_Footer {
-  padding: var(--spacing-2) !important;
-  background: var(--grey-100-5) !important;
-  border-top: 1px solid var(--black);
+.Chatroom_FloatButton {
+  transform: scale(1.5);
+  transform-origin: center right;
 }
